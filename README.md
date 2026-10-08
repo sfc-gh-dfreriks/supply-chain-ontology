@@ -82,6 +82,9 @@ PORT=3009
 | **Ripple Map** | Geography and topology side by side, selection synced, cascade played one lane at a time with the camera following each beat. A deliberate zoom on the topology panel is preserved across beats, with a **Reset view** control to refit. Each beat carries a subtitle, popout KPI cards showing what changed, and an "explain this step" popover with the arithmetic |
 | **Mitigation** | Reroutes inside real capacity, what cannot be saved and why, plus an AI you can interrogate |
 | **Optimization Map** | The recovery as a movie: one beat per reroute, the replaced lane struck through and the new one drawn in, with the receiving plant's headroom before and after. Ends on the plant the plan leaves tightest |
+| **Digital Thread** | Customer orders, built systems (serials), component lots and production tools as ontology classes, so "which customers did this bad lot reach?" is answered by traversal. Picks a serial and walks its genealogy; flags deviating lots and tools at high 48-hour failure risk |
+| **Operations Pulse** (Overview) | OTIF, late cost, operating rate and critical component cover per plant, from the OPS_EXT demo enrichment |
+| **Ask Cortex** (most pages) | A grounded AI_COMPLETE reading of the view on screen: the server passes the traversal or scenario result to the model, so the answer cites the numbers on screen |
 
 ---
 
