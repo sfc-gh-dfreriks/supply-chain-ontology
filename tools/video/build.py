@@ -4,8 +4,8 @@
 Four phases, in order, because each depends on the last:
 
   1. narrate  synthesise per-segment audio, measure its real duration
-  2. cards    render popup PNGs with alpha
-  3. capture  drive the live app with Playwright, dwelling per measured duration
+  2. capture  drive the live app with Playwright, dwelling per measured duration
+  3. cards    render popup PNGs with alpha (needs capture's timeline.json)
   4. assemble ffmpeg: video + narration + overlays -> mp4
 
 Timing is audio-led. The narration is produced first and the browser then holds
@@ -15,7 +15,7 @@ no way to recover sync afterwards.
 
 Usage:
     python3 tools/video/build.py                 # everything
-    python3 tools/video/build.py --voice Daniel  # re-render with another voice
+    python3 tools/video/build.py --engine say --voice Daniel  # a macOS system voice
     python3 tools/video/build.py --phase cards   # one phase only
 """
 
@@ -52,6 +52,30 @@ END_SECS = 5.5
 PAD_AFTER_SPEECH = 0.55        # a beat of silence after each line
 
 
+# Cloned-voice engine: Qwen3-TTS via mlx-audio in its own venv. The renderer and
+# the reference recording are shared with the 360 video builder.
+HOME = pathlib.Path.home()
+VOICECLONE = HOME / ".snowflake" / "video" / "voiceclone"
+QWEN_SAY = (HOME / "Documents" / "SAP" / "SAP Skills" / "sap-bdc-finance-360"
+            / "tools" / "voiceclone" / "qwen_say.py")
+REF_AUDIO = VOICECLONE / "ref" / "dave.wav"
+REF_TEXT = HOME / "Desktop" / "voice_samples" / "dave_reference.txt"
+
+
+def qwen_batch(items):
+    """Voice [(text, dest_wav)] in Dave's cloned voice with one model load."""
+    py = VOICECLONE / ".venv" / "bin" / "python"
+    for f in (py, QWEN_SAY, REF_AUDIO, REF_TEXT):
+        if not f.exists():
+            sys.exit(f"qwen3 engine needs {f}")
+    jobs = WORK / "qwen_jobs.json"
+    jobs.write_text(json.dumps(dict(ref_audio=str(REF_AUDIO), ref_text=REF_TEXT.read_text().strip(),
+                                    jobs=[dict(text=t, out=str(d)) for t, d in items])))
+    r = subprocess.run([str(py), str(QWEN_SAY), str(jobs)], capture_output=True, text=True)
+    if r.returncode:
+        sys.exit("Qwen3-TTS failed:\n" + r.stderr[-2000:])
+
+
 def run(cmd, **kw):
     return subprocess.run(cmd, check=True, capture_output=True, text=True, **kw)
 
@@ -64,17 +88,21 @@ def duration(path):
 
 # ------------------------------------------------------------------- 1. narrate
 
-def phase_narrate(voice, rate):
+def phase_narrate(voice, rate, engine="qwen3"):
     """Synthesise each line and measure it. Start offsets come later, from the
     capture itself — page loads and navigation cost real time that cannot be
     predicted, and guessing it put the captions 10s early by the end."""
     d = WORK / "audio"
     d.mkdir(parents=True, exist_ok=True)
     clips = []
+    if engine == "qwen3":
+        print("  voicing all segments with Qwen3-TTS (cloned voice)…")
+        qwen_batch([(seg["narration"], d / f"{seg['id']}.aiff") for seg in SEGMENTS])
     for seg in SEGMENTS:
-        aiff = d / f"{seg['id']}.aiff"
+        aiff = d / f"{seg['id']}.aiff"   # a WAV under qwen3; ffmpeg reads it by content
         wav = d / f"{seg['id']}.wav"
-        run(["say", "-v", voice, "-r", str(rate), "-o", str(aiff), seg["narration"]])
+        if engine != "qwen3":
+            run(["say", "-v", voice, "-r", str(rate), "-o", str(aiff), seg["narration"]])
         # 48k stereo so every clip concatenates without resampling surprises
         run(["ffmpeg", "-y", "-v", "error", "-i", str(aiff),
              "-ar", "48000", "-ac", "2", str(wav)])
@@ -87,7 +115,7 @@ def phase_narrate(voice, rate):
               f"{spoken + PAD_AFTER_SPEECH:5.2f}s")
 
     (WORK / "clips.json").write_text(json.dumps(
-        dict(voice=voice, rate=rate, title=TITLE_SECS, end=END_SECS,
+        dict(voice="Qwen3-TTS clone of Dave" if engine == "qwen3" else voice, rate=rate, title=TITLE_SECS, end=END_SECS,
              clips=clips), indent=2))
     spk = sum(c["secs"] for c in clips)
     print(f"\n  {len(clips)} clips · {spk:.1f}s of narration")
@@ -414,16 +442,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--voice", default="Samantha")
     ap.add_argument("--rate", type=int, default=168)
+    ap.add_argument("--engine", choices=["qwen3", "say"], default="qwen3",
+                    help="qwen3 = Dave's cloned voice (Qwen3-TTS); say = a macOS system voice")
     ap.add_argument("--phase", choices=["narrate", "cards", "capture", "assemble"])
     a = ap.parse_args()
 
     WORK.mkdir(parents=True, exist_ok=True)
-    phases = [a.phase] if a.phase else ["narrate", "cards", "capture", "assemble"]
+    # capture before cards: phase_cards reads timeline.json, which only capture writes
+    phases = [a.phase] if a.phase else ["narrate", "capture", "cards", "assemble"]
 
     for ph in phases:
         print(f"\n=== {ph} ===")
         if ph == "narrate":
-            phase_narrate(a.voice, a.rate)
+            phase_narrate(a.voice, a.rate, a.engine)
         elif ph == "cards":
             phase_cards()
         elif ph == "capture":

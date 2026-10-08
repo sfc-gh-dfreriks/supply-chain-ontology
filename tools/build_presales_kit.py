@@ -15,6 +15,8 @@ application, so they cannot drift from what a demo actually shows.
 """
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
 
 from docx import Document
@@ -38,7 +40,25 @@ from docx_kit import (
 )
 
 REPO = Path(__file__).resolve().parent.parent
+VIDEO_SRC = Path.home() / "Documents" / "SAP" / "Supply_Chain_Ontology_Walkthrough.mp4"
 KIT = Path.home() / "Documents" / "SAP" / "Supply_Chain_Ontology_Presales_Kit"
+
+
+def kit_video(src):
+    """Copy the walkthrough into the kit under a name carrying its real length,
+    replacing any older cut, and return that name for the file table."""
+    secs = float(subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(src)],
+        check=True, capture_output=True, text=True).stdout)
+    name = f"04_Walkthrough_Narrated_{int(secs // 60)}min{int(secs % 60):02d}.mp4"
+    KIT.mkdir(parents=True, exist_ok=True)
+    for old in KIT.glob("04_Walkthrough_Narrated_*.mp4"):
+        if old.name != name:
+            old.unlink()
+    if not (KIT / name).exists() or (KIT / name).stat().st_mtime < src.stat().st_mtime:
+        shutil.copy2(src, KIT / name)
+    return name
+
 
 PUBLIC_URL = "https://sfc-gh-dfreriks.github.io/supply-chain-ontology/"
 REPO_URL = "https://github.com/sfc-gh-dfreriks/supply-chain-ontology"
@@ -151,7 +171,7 @@ def build_start_here(schema, network):
                 "15 min",
             ],
             [
-                "04_Walkthrough_Narrated_4min43.mp4",
+                VIDEO_NAME,
                 "You want to see it run before you run it, or you need an async "
                 "asset for a customer who could not attend. Narrated.",
                 "4m43s",
@@ -217,16 +237,15 @@ def build_start_here(schema, network):
         "The distinction is the architect's talk track; see 05_Technical_Handbook.",
     )
 
-    h1(doc, "One caveat on the video")
+    h1(doc, "What the video covers")
     body(
         doc,
-        "The narrated walkthrough was recorded on 02 September 2026 and two things "
-        "have changed in the application since. The page then called Ontology Graph "
-        "is now called SAP BDC Catalog, because it is a catalog rather than an "
-        "ontology, and a new Ontology Model page was added to show the 15 classes and "
-        "11 relations directly. Nothing in the scenario flow or any figure changed. If "
-        "you play the video to a customer and then demo live, say the page was "
-        "renamed rather than let them spot it.",
+        "The narrated walkthrough was re-recorded on 08 October 2026 in the author's "
+        "own voice (a Qwen3-TTS clone). It follows the hurricane scenario end to end — "
+        "Scenario Studio, Ripple Map, Mitigation, Optimization Map — and every figure "
+        "matches the live app. It does not show the newer Digital Thread page or the "
+        "Ask Cortex buttons; demo those live if the room is operations- or "
+        "quality-led.",
     )
 
     h1(doc, "Support")
@@ -301,9 +320,9 @@ def build_quick_start(schema, network):
     )
     bullet(
         doc,
-        "If you are pairing the video with a live demo: the video predates two page "
-        "changes. Ontology Graph is now SAP BDC Catalog, and an Ontology Model page "
-        "was added. No figures changed. Mention it rather than let them spot it.",
+        "If you are pairing the video with a live demo: the video covers the hurricane "
+        "flow only. Digital Thread and the Ask Cortex buttons are live-only — show "
+        "them after the video rather than before.",
     )
 
     h1(doc, "The ten-minute path")
@@ -457,6 +476,12 @@ def build_quick_start(schema, network):
                 "Which of my customers are exposed, and what do I tell them?",
                 "Exposure by customer",
                 "Medium",
+            ],
+            [
+                "Quality / Operations lead",
+                "Which customers did this bad supplier lot reach?",
+                "Digital Thread",
+                "High",
             ],
             [
                 "Enterprise / Data Architect",
@@ -750,6 +775,8 @@ def build_setup(schema, network):
 
 
 def main():
+    global VIDEO_NAME
+    VIDEO_NAME = kit_video(VIDEO_SRC)
     KIT.mkdir(parents=True, exist_ok=True)
     schema, network = load_data()
     for fn in (build_start_here, build_quick_start, build_setup):

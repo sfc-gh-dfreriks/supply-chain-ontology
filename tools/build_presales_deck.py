@@ -35,23 +35,34 @@ W, H = Inches(13.333), Inches(7.5)
 
 PUBLIC_URL = "https://sfc-gh-dfreriks.github.io/supply-chain-ontology/"
 
-# timestamp -> (filename, crop height in source pixels or None for full)
+# name -> (video segment id, crop height in source pixels or None for full).
+# Frames are taken partway into the named segment, using the timeline the video
+# builder writes, so a re-recorded video with different pacing still lands on
+# the right screen. The crop removes the caption band below the app.
 FRAMES = {
-    60: ("start", None),
-    140: ("ripple", 1000),
-    220: ("fix1", None),
-    260: ("result", None),
+    "start": ("02_columns", None),
+    "ripple": ("16_ripple_sum", 1000),
+    "fix1": ("31_fix1", None),
+    "result": ("33_result", 1000),
 }
+TIMELINE = Path("/tmp/sc_video/timeline.json")   # written by tools/video/build.py
+
+
+def frame_time(seg_id):
+    segs = {s["id"]: s for s in json.loads(TIMELINE.read_text())["segments"]}
+    s = segs[seg_id]
+    return round(s["start"] + 0.75 * s["secs"], 2)
 
 
 def grab_frames():
     SHOTS.mkdir(parents=True, exist_ok=True)
     out = {}
-    for ts, (name, crop) in FRAMES.items():
+    stale = VIDEO.stat().st_mtime
+    for name, (seg, crop) in FRAMES.items():
         path = SHOTS / f"{name}.png"
-        if not path.exists():
+        if not path.exists() or path.stat().st_mtime < stale:
             subprocess.run(
-                ["ffmpeg", "-v", "error", "-ss", str(ts), "-i", str(VIDEO),
+                ["ffmpeg", "-v", "error", "-ss", str(frame_time(seg)), "-i", str(VIDEO),
                  "-frames:v", "1", str(path), "-y"],
                 check=True,
             )
