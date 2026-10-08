@@ -4,6 +4,7 @@ import { api, type ClassMode, type ClassDetail, type OntRelation } from "../lib/
 import { GraphCanvas } from "../components/GraphCanvas";
 import { MetricCard, ChartCard } from "../components/Cards";
 import { LayerStack, RollupBars } from "../components/LayerStack";
+import { AskCortex } from "../components/AskCortex";
 
 const MODES: { id: ClassMode; label: string; blurb: string }[] = [
   { id: "both", label: "Both",
@@ -234,6 +235,7 @@ export default function OntologyModel() {
           )}
           {selName && d && (
             <div className="space-y-3">
+              <AskCortex compact topic="class" args={{ class: selName }} label={`Explain ${selName}`} />
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold text-slate-800">{d.cls.name}</h3>

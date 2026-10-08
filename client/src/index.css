@@ -24,3 +24,13 @@ body { margin: 0; background: #f1f5f9; font-family: ui-sans-serif, system-ui, -a
 .animate-lane-draw {
   animation: lane-draw 900ms ease-out both;
 }
+
+/* Ask Cortex markdown answers */
+.cortex-md { font-size: 0.875rem; line-height: 1.55; color: #1e293b; }
+.cortex-md p { margin: 0.4rem 0; }
+.cortex-md ul, .cortex-md ol { margin: 0.4rem 0 0.4rem 1.25rem; }
+.cortex-md ul { list-style: disc; } .cortex-md ol { list-style: decimal; }
+.cortex-md h1, .cortex-md h2, .cortex-md h3 { font-weight: 700; margin: 0.6rem 0 0.3rem; font-size: 0.95rem; }
+.cortex-md table { border-collapse: collapse; margin: 0.5rem 0; font-size: 0.78rem; width: 100%; }
+.cortex-md th { background: #eef2ff; text-align: left; font-weight: 600; }
+.cortex-md th, .cortex-md td { border: 1px solid #e0e7ff; padding: 0.25rem 0.5rem; }

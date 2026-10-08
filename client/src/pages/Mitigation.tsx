@@ -3,6 +3,7 @@ import { Bullet, FlowComparison } from "../components/ScenarioCharts";
 import { useNetwork, useScenario } from "../hooks/useScenario";
 import { money, pct } from "../lib/severity";
 import { STATIC, api } from "../lib/api";
+import { AskCortex } from "../components/AskCortex";
 
 /**
  * The mitigation plan: what the optimizer proposes, what it cannot save, and an
@@ -96,6 +97,12 @@ export default function Mitigation() {
 
   return (
     <div className="space-y-4">
+      {disruption && (
+        <div className="flex justify-end">
+          <AskCortex topic="mitigation" args={{ disruption }} label="Ask Cortex: should we approve this plan?"
+            suggestions={["What should be escalated as unmitigable?", "Which reroute protects the most order value?", "What is the residual risk to OTIF?"]} />
+        </div>
+      )}
       {/* outcome */}
       <div className="grid grid-cols-4 gap-3">
         {[

@@ -2,12 +2,13 @@ import { Router } from "express";
 import { loadOntology, buildGraph } from "../services/ontology.js";
 import { loadSchema, buildClassGraph, classDetail, type ClassMode }
   from "../services/ontologySchema.js";
-import { ask, askConfigured, semanticView } from "../services/analyst.js";
+import { ask, askConfigured, semanticView, SEMANTIC_VIEWS } from "../services/analyst.js";
 import { traverse, shortestPath, hubs, topology } from "../services/traverse.js";
 import { loadNetwork, simulate, type Disruption, type DisruptionKind }
   from "../services/scenario.js";
 import { mitigate } from "../services/mitigate.js";
 import { explain, interrogate, reasoningConfigured } from "../services/reason.js";
+import { threadSummary, serialTrace, askCortex, operations } from "../services/thread.js";
 
 export const apiRouter = Router();
 
@@ -210,8 +211,11 @@ apiRouter.post("/api/ask", wrapAsync(async (req, res) => {
     res.status(400).json({ error: "question is required" });
     return;
   }
-  res.json(await ask(history));
+  res.json(await ask(history, String(body.view ?? "catalog")));
 }));
+
+apiRouter.get("/api/ask/views", wrap((_req, res) =>
+  res.json(Object.entries(SEMANTIC_VIEWS).map(([key, v]) => ({ key, ...v })))));
 
 apiRouter.get("/api/ask/examples", wrap((_req, res) => {
   // Supply-chain phrasing, and only questions this model can actually answer.
@@ -406,7 +410,10 @@ apiRouter.post("/api/scenario/ask", wrapAsync(async (req, res) => {
 
 /** Preset scenarios, so the page opens on something meaningful. */
 apiRouter.get("/api/scenario/presets", wrap((_req, res) => {
+  // Live presets first: derived from Supply Chain 360 risk (failing tool, worst
+  // shortfall, rejected lot) by tools/export_ops_thread.py.
   res.json([
+    ...operations().presets.map((p: any) => ({ ...p, source: "sc360" })),
     { id: "hurricane-austin", label: "Hurricane — Austin Fab offline",
       kind: "weather", targets: ["PLT-2000"], severity: 1, durationDays: 60,
       blurb: "The headline case: two customers lose supply directly and Penang is " +
@@ -430,4 +437,26 @@ apiRouter.get("/api/scenario/presets", wrap((_req, res) => {
       kind: "demand", targets: ["CUS-001"], severity: 0.6, durationDays: 30,
       blurb: "Tests headroom in the other direction: two plants go over 100%." },
   ]);
+}));
+
+// ---------------------------------------------------------------- digital thread
+apiRouter.get("/api/thread", wrap((_req, res) => res.json(threadSummary())));
+apiRouter.get("/api/operations", wrap((_req, res) => res.json(operations())));
+
+apiRouter.get("/api/thread/serial/:serial", wrap((req, res) => {
+  const t = serialTrace(String(req.params.serial));
+  if (!t) return res.status(404).json({ error: "serial not found" });
+  res.json(t);
+}));
+
+/** Ask Cortex: grounded analysis of the view on screen (thread, serial, lot, equipment, scenario). */
+apiRouter.post("/api/ask-cortex", wrapAsync(async (req, res) => {
+  const topic = String(req.body?.topic ?? "");
+  const args = (req.body?.args && typeof req.body.args === "object") ? req.body.args : {};
+  if (["scenario", "ripple", "mitigation", "optimize"].includes(topic)) {
+    const { d, error } = parseDisruption(args.disruption ?? {});
+    if (!d) { res.status(400).json({ error }); return; }
+    args.disruption = d;
+  }
+  res.json({ text: await askCortex(topic, args, String(req.body?.question ?? "").slice(0, 1000)) });
 }));

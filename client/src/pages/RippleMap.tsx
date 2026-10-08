@@ -6,6 +6,7 @@ import { hopColor, money, severityColor } from "../lib/severity";
 import { buildSubSteps, groupByHop, revealedFlows, revealedHop } from "../lib/substeps";
 import { ExplainStep, KpiCards, PaceControl, SubtitleBand } from "../components/StepCards";
 import { dwellMs, usePace } from "../lib/pace";
+import { AskCortex } from "../components/AskCortex";
 
 /**
  * The ripple, geographically and topologically, stepped one lane at a time.
@@ -95,6 +96,12 @@ export default function RippleMap() {
 
   return (
     <div className="space-y-4">
+      {disruption && (
+        <div className="flex justify-end">
+          <AskCortex topic="ripple" args={{ disruption }} label="Ask Cortex: explain this ripple"
+            suggestions={["Which customers feel it first, and when?", "Which orders at impaired plants are at risk?", "Why does the impact reach that far?"]} />
+        </div>
+      )}
       {/* ---- what scenario this is --------------------------------------- */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2">
         <div className="text-sm font-semibold text-slate-800">
@@ -105,6 +112,7 @@ export default function RippleMap() {
         </span>
         <span className="ml-auto text-[11px] text-slate-500">
           {money(result.totals.valueAtRisk)} at risk · {result.totals.pctOfNetwork}% of network
+          {result.totals.costOfDisruption ? <> · <b className="text-red-600">{money(result.totals.costOfDisruption)} cost of disruption</b></> : null}
         </span>
       </div>
 

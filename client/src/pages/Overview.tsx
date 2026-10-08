@@ -79,7 +79,7 @@ export default function Overview() {
             <div className="text-6xl font-extrabold" style={{ color: gaugeColor }}>{overall}</div>
             <div className="text-xs text-slate-400">out of 100</div>
             <div className="mt-4 w-full space-y-2">
-              {sc.data.items.map((it: any) => (
+              {[...sc.data.items].sort((a: any, b: any) => b.score - a.score).map((it: any) => (
                 <div key={it.id} className="flex items-center gap-2">
                   <div className="w-40 truncate text-xs text-slate-600" title={it.label}>{it.label}</div>
                   <div className="flex-1"><Bar pct={it.score} /></div>
@@ -92,7 +92,7 @@ export default function Overview() {
 
         <ChartCard title="SAP value chain" subtitle="products & coverage by business process" className="lg:col-span-2">
           <div className="grid grid-cols-2 gap-3">
-            {proc.data.filter((r: any) => r.code !== "NONE").map((r: any) => (
+            {proc.data.filter((r: any) => r.code !== "NONE").sort((a: any, b: any) => b.coverage_pct - a.coverage_pct).map((r: any) => (
               <div key={r.code} className="rounded-lg border border-gray-100 p-3">
                 <div className="flex items-center justify-between">
                   <ProcessBadge code={r.code} color={r.color} name={r.name} />
@@ -112,7 +112,7 @@ export default function Overview() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ChartCard title="Entity semantic roles" subtitle="CDS entities typed from @ObjectModel.modelingPattern">
           <div className="space-y-2">
-            {roles.map((r) => (
+            {[...roles].sort((a, b) => b.pct - a.pct).map((r) => (
               <div key={r.role} className="flex items-center gap-3">
                 <div className="w-28 text-xs text-slate-600">{r.label}</div>
                 <div className="flex-1"><Bar pct={r.pct} color={r.color} /></div>
@@ -127,7 +127,7 @@ export default function Overview() {
             <div className="space-y-3">
               <div>
                 <div className="mb-1 text-[10px] uppercase tracking-wide text-slate-400">Source system</div>
-                {lenses.data.source_systems.map(([name, n]: [string, number]) => (
+                {[...lenses.data.source_systems].sort((a: any, b: any) => b[1] - a[1]).map(([name, n]: [string, number]) => (
                   <div key={name} className="flex items-center gap-3">
                     <div className="w-40 truncate text-xs text-slate-600">{name}</div>
                     <div className="flex-1"><Bar pct={(100 * n) / t.products} /></div>
@@ -137,7 +137,7 @@ export default function Overview() {
               </div>
               <div>
                 <div className="mb-1 text-[10px] uppercase tracking-wide text-slate-400">Provenance</div>
-                {lenses.data.provenance.map(([name, n]: [string, number]) => (
+                {[...lenses.data.provenance].sort((a: any, b: any) => b[1] - a[1]).map(([name, n]: [string, number]) => (
                   <div key={name} className="flex items-center gap-3">
                     <div className="w-40 truncate text-xs capitalize text-slate-600">{name}</div>
                     <div className="flex-1"><Bar pct={(100 * n) / t.products} color="#8b5cf6" /></div>

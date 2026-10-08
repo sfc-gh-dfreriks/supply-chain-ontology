@@ -70,8 +70,13 @@ export interface Substitution {
   capable_plants: number; has_alternative: boolean;
 }
 
+export interface PlantEconomics {
+  node_id: string; plant_name: string; monthly_order_value: number; margin_rate: number;
+  otif_pct: number; open_orders: number; open_order_value: number;
+}
+
 export interface Network {
-  nodes: Node[]; flows: Flow[]; capacity: Capacity[];
+  nodes: Node[]; flows: Flow[]; capacity: Capacity[]; economics?: PlantEconomics[];
   inventory: Inventory[]; substitution: Substitution[];
   totals: any; source: string; notes: Record<string, string>;
 }
@@ -139,6 +144,11 @@ export interface ScenarioResult {
     monthlyNetworkValue: number;
     pctOfNetwork: number;
     revenueAtRisk: number;       // outbound only — what customers do not receive
+    /** Dollar view: margin on systems not built + penalties on orders pushed late. */
+    lostMargin: number;
+    latePenalty: number;
+    costOfDisruption: number;
+    ordersAtRisk: number;
     customersAffected: number;
     plantsImpaired: number;
     maxHop: number;
@@ -360,6 +370,23 @@ export function simulate(d: Disruption): ScenarioResult {
     .filter((f) => f.target_type === "Customer")
     .reduce((s, f) => s + f.valueAtRisk, 0);
 
+  // ---- dollar view ---------------------------------------------------------
+  // Each impaired plant loses `impairment` of its order book for the exposed days.
+  // Margin is lost on what is not built; what is built late pays 0.5%/day of order
+  // value, capped at 5% — the same penalty rule as Supply Chain 360.
+  let lostMargin = 0, latePenalty = 0, ordersAtRisk = 0;
+  const econ = new Map((net.economics ?? []).map((e) => [e.node_id, e]));
+  for (const n of impaired.values()) {
+    const e = econ.get(n.node_id);
+    if (!e || n.node_type !== "Plant") continue;
+    const days = n.daysExposed ?? d.durationDays;
+    const valueHit = e.monthly_order_value * n.impairment * (days / DAYS_PER_MONTH);
+    const slip = Math.round(days * n.impairment);
+    lostMargin += valueHit * e.margin_rate * 0.5;          // half the shortfall is lost, half recovered late
+    latePenalty += valueHit * 0.5 * Math.min(0.05, 0.005 * slip);
+    ordersAtRisk += Math.round(e.open_orders * n.impairment);
+  }
+
   return {
     disruption: d,
     origin,
@@ -371,6 +398,10 @@ export function simulate(d: Disruption): ScenarioResult {
       monthlyNetworkValue: round(monthlyNetworkValue),
       pctOfNetwork: round(100 * valueAtRisk / Math.max(monthlyNetworkValue, 1), 1),
       revenueAtRisk: round(revenueAtRisk),
+      lostMargin: round(lostMargin),
+      latePenalty: round(latePenalty),
+      costOfDisruption: round(lostMargin + latePenalty),
+      ordersAtRisk,
       customersAffected: new Set(
         flows.filter((f) => f.target_type === "Customer").map((f) => f.target_id)).size,
       plantsImpaired: impairedList.filter((n) => n.node_type === "Plant").length,
@@ -384,6 +415,9 @@ export function simulate(d: Disruption): ScenarioResult {
       "Value at risk prorates monthly flow value over the days actually exposed.",
       "The multi-level BOM is not exploded, so component-level shortages inside " +
       "a plant are not traced.",
+      "Cost of disruption assumes half the lost output is never sold (margin lost) " +
+      "and half ships late at 0.5% of order value per day, capped at 5%. Order " +
+      "economics are representative demo enrichment.",
     ],
   };
 }

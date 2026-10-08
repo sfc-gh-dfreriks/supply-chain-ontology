@@ -1,10 +1,10 @@
 import { Network, Workflow, Grid3x3, ShieldCheck, LayoutDashboard, Boxes,
          MessageSquare, Share2, PlayCircle, CloudLightning, Globe2,
-         Wrench , Route, Layers} from "lucide-react";
+         Wrench , Route, Layers, Cable} from "lucide-react";
 
 export type PageId = "overview" | "model" | "graph" | "traverse" | "processes" | "usecases"
                    | "correlation" | "coverage" | "ask" | "demo"
-                   | "scenario" | "ripple" | "optimize" | "mitigation";
+                   | "scenario" | "ripple" | "optimize" | "mitigation" | "thread";
 
 const NAV: { id: PageId; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -14,6 +14,7 @@ const NAV: { id: PageId; label: string; icon: any }[] = [
   { id: "model", label: "Ontology Model", icon: Layers },
   { id: "graph", label: "SAP BDC Catalog", icon: Network },
   { id: "traverse", label: "Graph Traversal", icon: Share2 },
+  { id: "thread", label: "Digital Thread", icon: Cable },
   { id: "processes", label: "Business Processes", icon: Workflow },
   { id: "usecases", label: "Use Cases / Insight Apps", icon: Boxes },
   { id: "correlation", label: "Correlation", icon: Grid3x3 },

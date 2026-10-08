@@ -5,7 +5,7 @@
     {
       "layer": "L1",
       "name": "Physical",
-      "detail": "KG_NODE 2,662 \u00b7 KG_EDGE 5,457",
+      "detail": "KG_NODE 3,642 \u00b7 KG_EDGE 8,405",
       "note": "instances plus 15 schema nodes for the class hierarchy",
       "objects": 28
     },
@@ -19,9 +19,9 @@
     {
       "layer": "L3",
       "name": "Abstract views",
-      "detail": "40 views \u00b7 4 UDFs \u00b7 10 procedures",
+      "detail": "45 views \u00b7 4 UDFs \u00b7 10 procedures",
       "note": "VW_ONT_* span several concrete types in one query",
-      "objects": 40
+      "objects": 45
     },
     {
       "layer": "L4",
@@ -39,6 +39,16 @@
     }
   ],
   "classes": [
+    {
+      "name": "Asset",
+      "parent": "Entity",
+      "is_abstract": true,
+      "description": "A physical production asset with a health state.",
+      "depth": 1,
+      "descendants": 1,
+      "instances": 0,
+      "source": null
+    },
     {
       "name": "BusinessProcess",
       "parent": "CatalogObject",
@@ -82,6 +92,22 @@
       "source": null
     },
     {
+      "name": "ComponentLot",
+      "parent": "Item",
+      "is_abstract": false,
+      "description": "A received supplier lot of a BOM component, with inspection result.",
+      "depth": 2,
+      "descendants": 0,
+      "instances": 114,
+      "source": {
+        "database": "SAP_SUPPLY_CHAIN",
+        "schema": "ONTOLOGY",
+        "table": "KG_NODE",
+        "filter_col": "NODE_TYPE",
+        "filter_val": "ComponentLot"
+      }
+    },
+    {
       "name": "Customer",
       "parent": "Party",
       "is_abstract": false,
@@ -119,9 +145,25 @@
       "is_abstract": true,
       "description": "Anything the supply-chain ontology can talk about.",
       "depth": 0,
-      "descendants": 14,
+      "descendants": 21,
       "instances": 0,
       "source": null
+    },
+    {
+      "name": "Equipment",
+      "parent": "Asset",
+      "is_abstract": false,
+      "description": "A production tool (stepper, etcher, CVD chamber, assembly cell) at a work center.",
+      "depth": 2,
+      "descendants": 0,
+      "instances": 20,
+      "source": {
+        "database": "SAP_SUPPLY_CHAIN",
+        "schema": "ONTOLOGY",
+        "table": "KG_NODE",
+        "filter_col": "NODE_TYPE",
+        "filter_val": "Equipment"
+      }
     },
     {
       "name": "Facility",
@@ -164,6 +206,16 @@
         "filter_col": "NODE_TYPE",
         "filter_val": "InterPlantFlow"
       }
+    },
+    {
+      "name": "Item",
+      "parent": "Entity",
+      "is_abstract": true,
+      "description": "A traceable physical unit.",
+      "depth": 1,
+      "descendants": 2,
+      "instances": 0,
+      "source": null
     },
     {
       "name": "MaterialCategory",
@@ -234,6 +286,22 @@
       }
     },
     {
+      "name": "SalesOrder",
+      "parent": "Transaction",
+      "is_abstract": false,
+      "description": "A customer order line for an inspection system, with OTIF outcome and late cost.",
+      "depth": 2,
+      "descendants": 0,
+      "instances": 420,
+      "source": {
+        "database": "SAP_SUPPLY_CHAIN",
+        "schema": "ONTOLOGY",
+        "table": "KG_NODE",
+        "filter_col": "NODE_TYPE",
+        "filter_val": "SalesOrder"
+      }
+    },
+    {
       "name": "Supplier",
       "parent": "Party",
       "is_abstract": false,
@@ -248,6 +316,32 @@
         "filter_col": "NODE_TYPE",
         "filter_val": "Supplier"
       }
+    },
+    {
+      "name": "SystemSerial",
+      "parent": "Item",
+      "is_abstract": false,
+      "description": "One built inspection system, identified by serial number.",
+      "depth": 2,
+      "descendants": 0,
+      "instances": 419,
+      "source": {
+        "database": "SAP_SUPPLY_CHAIN",
+        "schema": "ONTOLOGY",
+        "table": "KG_NODE",
+        "filter_col": "NODE_TYPE",
+        "filter_val": "SystemSerial"
+      }
+    },
+    {
+      "name": "Transaction",
+      "parent": "Entity",
+      "is_abstract": true,
+      "description": "A business document that commits the supply chain to deliver.",
+      "depth": 1,
+      "descendants": 1,
+      "instances": 0,
+      "source": null
     }
   ],
   "relations": [
@@ -260,6 +354,20 @@
       "is_transitive": false,
       "inverse": null,
       "description": "A declared association between two CDS entities.",
+      "is_stored": true,
+      "is_inferred": false,
+      "is_abstract": false,
+      "rule": null
+    },
+    {
+      "name": "builtAt",
+      "domain": "SystemSerial",
+      "range": "Plant",
+      "cardinality": "N:1",
+      "is_hierarchical": false,
+      "is_transitive": false,
+      "inverse": "built",
+      "description": "Where the system was built.",
       "is_stored": true,
       "is_inferred": false,
       "is_abstract": false,
@@ -293,6 +401,20 @@
       "is_transitive": false,
       "inverse": null,
       "description": "A material flow carries one material category.",
+      "is_stored": true,
+      "is_inferred": false,
+      "is_abstract": false,
+      "rule": null
+    },
+    {
+      "name": "containsLot",
+      "domain": "SystemSerial",
+      "range": "ComponentLot",
+      "cardinality": "N:N",
+      "is_hierarchical": false,
+      "is_transitive": false,
+      "inverse": "usedIn",
+      "description": "Component lots consumed in the system (genealogy).",
       "is_stored": true,
       "is_inferred": false,
       "is_abstract": false,
@@ -341,6 +463,48 @@
       "rule": null
     },
     {
+      "name": "fulfilledBy",
+      "domain": "SalesOrder",
+      "range": "Plant",
+      "cardinality": "N:1",
+      "is_hierarchical": false,
+      "is_transitive": false,
+      "inverse": "fulfills",
+      "description": "The plant that builds and ships the order.",
+      "is_stored": true,
+      "is_inferred": false,
+      "is_abstract": false,
+      "rule": null
+    },
+    {
+      "name": "installedAt",
+      "domain": "Equipment",
+      "range": "Plant",
+      "cardinality": "N:1",
+      "is_hierarchical": false,
+      "is_transitive": false,
+      "inverse": "hasEquipment",
+      "description": "The plant where a tool is installed.",
+      "is_stored": true,
+      "is_inferred": false,
+      "is_abstract": false,
+      "rule": null
+    },
+    {
+      "name": "placedBy",
+      "domain": "SalesOrder",
+      "range": "Customer",
+      "cardinality": "N:1",
+      "is_hierarchical": false,
+      "is_transitive": false,
+      "inverse": "placed",
+      "description": "The customer who placed the order.",
+      "is_stored": true,
+      "is_inferred": false,
+      "is_abstract": false,
+      "rule": null
+    },
+    {
       "name": "produces",
       "domain": "Plant",
       "range": "MaterialCategory",
@@ -369,6 +533,20 @@
       "rule": null
     },
     {
+      "name": "shippedOn",
+      "domain": "SystemSerial",
+      "range": "SalesOrder",
+      "cardinality": "N:1",
+      "is_hierarchical": false,
+      "is_transitive": false,
+      "inverse": "shipped",
+      "description": "The order the system shipped against.",
+      "is_stored": true,
+      "is_inferred": false,
+      "is_abstract": false,
+      "rule": null
+    },
+    {
       "name": "shipsTo",
       "domain": "Plant",
       "range": "Customer",
@@ -377,6 +555,20 @@
       "is_transitive": false,
       "inverse": null,
       "description": "A plant ships finished output to a customer.",
+      "is_stored": true,
+      "is_inferred": false,
+      "is_abstract": false,
+      "rule": null
+    },
+    {
+      "name": "suppliedBy",
+      "domain": "ComponentLot",
+      "range": "Supplier",
+      "cardinality": "N:1",
+      "is_hierarchical": false,
+      "is_transitive": false,
+      "inverse": "suppliedLot",
+      "description": "The supplier of the lot.",
       "is_stored": true,
       "is_inferred": false,
       "is_abstract": false,
@@ -467,6 +659,34 @@
     {
       "child": "CDSEntity",
       "parent": "CatalogObject"
+    },
+    {
+      "child": "Asset",
+      "parent": "Entity"
+    },
+    {
+      "child": "Equipment",
+      "parent": "Asset"
+    },
+    {
+      "child": "Transaction",
+      "parent": "Entity"
+    },
+    {
+      "child": "SalesOrder",
+      "parent": "Transaction"
+    },
+    {
+      "child": "Item",
+      "parent": "Entity"
+    },
+    {
+      "child": "SystemSerial",
+      "parent": "Item"
+    },
+    {
+      "child": "ComponentLot",
+      "parent": "Item"
     }
   ],
   "abstract_rollup": {
@@ -609,6 +829,24 @@
       "path": "Entity > CatalogObject"
     },
     {
+      "root": "Entity",
+      "descendant": "Asset",
+      "depth": 1,
+      "path": "Entity > Asset"
+    },
+    {
+      "root": "Entity",
+      "descendant": "Transaction",
+      "depth": 1,
+      "path": "Entity > Transaction"
+    },
+    {
+      "root": "Entity",
+      "descendant": "Item",
+      "depth": 1,
+      "path": "Entity > Item"
+    },
+    {
       "root": "Facility",
       "descendant": "Plant",
       "depth": 1,
@@ -663,6 +901,30 @@
       "path": "CatalogObject > CDSEntity"
     },
     {
+      "root": "Asset",
+      "descendant": "Equipment",
+      "depth": 1,
+      "path": "Asset > Equipment"
+    },
+    {
+      "root": "Transaction",
+      "descendant": "SalesOrder",
+      "depth": 1,
+      "path": "Transaction > SalesOrder"
+    },
+    {
+      "root": "Item",
+      "descendant": "SystemSerial",
+      "depth": 1,
+      "path": "Item > SystemSerial"
+    },
+    {
+      "root": "Item",
+      "descendant": "ComponentLot",
+      "depth": 1,
+      "path": "Item > ComponentLot"
+    },
+    {
       "root": "Entity",
       "descendant": "Plant",
       "depth": 2,
@@ -715,11 +977,55 @@
       "descendant": "CDSEntity",
       "depth": 2,
       "path": "Entity > CatalogObject > CDSEntity"
+    },
+    {
+      "root": "Entity",
+      "descendant": "Equipment",
+      "depth": 2,
+      "path": "Entity > Asset > Equipment"
+    },
+    {
+      "root": "Entity",
+      "descendant": "SalesOrder",
+      "depth": 2,
+      "path": "Entity > Transaction > SalesOrder"
+    },
+    {
+      "root": "Entity",
+      "descendant": "SystemSerial",
+      "depth": 2,
+      "path": "Entity > Item > SystemSerial"
+    },
+    {
+      "root": "Entity",
+      "descendant": "ComponentLot",
+      "depth": 2,
+      "path": "Entity > Item > ComponentLot"
     }
   ],
   "ancestors": [
     {
+      "start": "Facility",
+      "ancestor": "Entity",
+      "depth": 1
+    },
+    {
+      "start": "Plant",
+      "ancestor": "Facility",
+      "depth": 1
+    },
+    {
+      "start": "Party",
+      "ancestor": "Entity",
+      "depth": 1
+    },
+    {
       "start": "Supplier",
+      "ancestor": "Party",
+      "depth": 1
+    },
+    {
+      "start": "Customer",
       "ancestor": "Party",
       "depth": 1
     },
@@ -729,13 +1035,18 @@
       "depth": 1
     },
     {
-      "start": "MaterialCategory",
-      "ancestor": "Entity",
+      "start": "OutboundFlow",
+      "ancestor": "MaterialFlow",
       "depth": 1
     },
     {
-      "start": "DataProduct",
-      "ancestor": "CatalogObject",
+      "start": "InterPlantFlow",
+      "ancestor": "MaterialFlow",
+      "depth": 1
+    },
+    {
+      "start": "MaterialCategory",
+      "ancestor": "Entity",
       "depth": 1
     },
     {
@@ -744,33 +1055,103 @@
       "depth": 1
     },
     {
+      "start": "BusinessProcess",
+      "ancestor": "CatalogObject",
+      "depth": 1
+    },
+    {
+      "start": "DataProduct",
+      "ancestor": "CatalogObject",
+      "depth": 1
+    },
+    {
+      "start": "CDSEntity",
+      "ancestor": "CatalogObject",
+      "depth": 1
+    },
+    {
+      "start": "SalesOrder",
+      "ancestor": "Transaction",
+      "depth": 1
+    },
+    {
+      "start": "Asset",
+      "ancestor": "Entity",
+      "depth": 1
+    },
+    {
+      "start": "Item",
+      "ancestor": "Entity",
+      "depth": 1
+    },
+    {
+      "start": "SystemSerial",
+      "ancestor": "Item",
+      "depth": 1
+    },
+    {
+      "start": "Plant",
+      "ancestor": "Entity",
+      "depth": 2
+    },
+    {
+      "start": "Supplier",
+      "ancestor": "Entity",
+      "depth": 2
+    },
+    {
+      "start": "Customer",
+      "ancestor": "Entity",
+      "depth": 2
+    },
+    {
+      "start": "InboundFlow",
+      "ancestor": "Entity",
+      "depth": 2
+    },
+    {
+      "start": "OutboundFlow",
+      "ancestor": "Entity",
+      "depth": 2
+    },
+    {
+      "start": "InterPlantFlow",
+      "ancestor": "Entity",
+      "depth": 2
+    },
+    {
+      "start": "BusinessProcess",
+      "ancestor": "Entity",
+      "depth": 2
+    },
+    {
       "start": "DataProduct",
       "ancestor": "Entity",
       "depth": 2
     },
     {
+      "start": "Equipment",
+      "ancestor": "Entity",
+      "depth": 2
+    },
+    {
+      "start": "Equipment",
+      "ancestor": "Asset",
+      "depth": 1
+    },
+    {
+      "start": "Transaction",
+      "ancestor": "Entity",
+      "depth": 1
+    },
+    {
+      "start": "ComponentLot",
+      "ancestor": "Item",
+      "depth": 1
+    },
+    {
       "start": "InboundFlow",
       "ancestor": "MaterialFlow",
-      "depth": 1
-    },
-    {
-      "start": "BusinessProcess",
-      "ancestor": "CatalogObject",
-      "depth": 1
-    },
-    {
-      "start": "InboundFlow",
-      "ancestor": "Entity",
-      "depth": 2
-    },
-    {
-      "start": "BusinessProcess",
-      "ancestor": "Entity",
-      "depth": 2
-    },
-    {
-      "start": "Plant",
-      "ancestor": "Facility",
       "depth": 1
     },
     {
@@ -779,57 +1160,17 @@
       "depth": 2
     },
     {
-      "start": "Party",
-      "ancestor": "Entity",
-      "depth": 1
-    },
-    {
-      "start": "Plant",
+      "start": "SalesOrder",
       "ancestor": "Entity",
       "depth": 2
     },
     {
-      "start": "Customer",
+      "start": "SystemSerial",
       "ancestor": "Entity",
       "depth": 2
     },
     {
-      "start": "OutboundFlow",
-      "ancestor": "MaterialFlow",
-      "depth": 1
-    },
-    {
-      "start": "InterPlantFlow",
-      "ancestor": "MaterialFlow",
-      "depth": 1
-    },
-    {
-      "start": "Facility",
-      "ancestor": "Entity",
-      "depth": 1
-    },
-    {
-      "start": "Customer",
-      "ancestor": "Party",
-      "depth": 1
-    },
-    {
-      "start": "OutboundFlow",
-      "ancestor": "Entity",
-      "depth": 2
-    },
-    {
-      "start": "InterPlantFlow",
-      "ancestor": "Entity",
-      "depth": 2
-    },
-    {
-      "start": "CDSEntity",
-      "ancestor": "CatalogObject",
-      "depth": 1
-    },
-    {
-      "start": "Supplier",
+      "start": "ComponentLot",
       "ancestor": "Entity",
       "depth": 2
     }
@@ -1213,13 +1554,13 @@
     ]
   },
   "counts": {
-    "classes": 15,
-    "abstract": 5,
-    "concrete": 10,
-    "relations": 11,
-    "relations_stored": 9,
+    "classes": 22,
+    "abstract": 8,
+    "concrete": 14,
+    "relations": 18,
+    "relations_stored": 16,
     "relations_inferred": 1,
     "relations_abstract": 1,
-    "instances": 2647
+    "instances": 3620
   }
 }

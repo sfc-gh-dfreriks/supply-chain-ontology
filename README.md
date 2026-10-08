@@ -293,7 +293,7 @@ pattern. `VITE_STATIC=1` makes the client read pre-baked JSON from
 
 ```bash
 npm run dev            # in one shell — the baker reads from the live API
-npm run bake           # writes 93 snapshots to client/public/data/
+npm run bake           # writes ~280 snapshots (incl. ~80 Ask Cortex answers) to client/public/data/
 npm run build:static
 npm run preview:static # http://localhost:8899
 ```
@@ -305,6 +305,8 @@ empty.
 What the public build cannot do, and says so on screen:
 
 - **Ask** is disabled — Cortex Analyst needs Snowflake credentials.
+- **Ask Cortex** shows the baked default answer for each preset view, lot and
+  class; follow-up questions need the live app.
 - **Shortest path** is hidden — the pair space is quadratic; only expansion from
   the 24 most-connected entities is baked.
 

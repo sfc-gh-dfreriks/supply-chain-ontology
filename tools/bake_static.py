@@ -54,6 +54,18 @@ def sim_name(d: dict) -> str:
     return re.sub(r"[^A-Za-z0-9=&._-]", "-", key)
 
 
+def ask_key(topic: str, args: dict) -> str:
+    """Key for a baked Ask Cortex answer. Must stay identical to askKey() in
+    client/src/lib/api.ts: sorted args, a disruption keyed by sim_name()."""
+    def val(k):
+        v = args[k]
+        if k == "disruption" and v:
+            return sim_name(v)
+        return json.dumps(v, separators=(",", ":")) if isinstance(v, (dict, list)) else str(v)
+    a = "&".join(f"{k}={val(k)}" for k in sorted(args))
+    return f"{topic}?{a}" if a else topic
+
+
 def name(path: str) -> str:
     """Filename for a snapshot. Must stay identical to snapshotName() in
     client/src/lib/api.ts.
@@ -104,6 +116,7 @@ def main() -> None:
     # one snapshot per ontology class, for the detail panel. Driven off the
     # schema rather than a hardcoded list so a new class is picked up
     # automatically on the next bake.
+    classes = []
     try:
         classes = [c["name"] for c in fetch("/ontology/schema")["classes"]]
         paths += [f"/ontology/class/{urllib.parse.quote(n)}" for n in classes]
@@ -159,6 +172,52 @@ def main() -> None:
         total += f.stat().st_size
         n_sim += 1
     print(f"  baked {n_sim} scenario result(s) for {len(presets)} preset(s)")
+
+    # Digital thread and operations pulse: the summary, the pulse, and one trace
+    # per built serial so every row in the serial picker resolves.
+    summary = fetch("/thread")
+    total += bake("/thread", summary) + bake("/operations")
+    serials = [s["serial_no"] for s in summary["serials"]]
+    for sn in serials:
+        total += bake(f"/thread/serial/{urllib.parse.quote(sn)}")
+    print(f"  baked thread, operations and {len(serials)} serial traces")
+
+    # Ask Cortex answers come from POST /ask-cortex (AI_COMPLETE). Bake the
+    # default (no question) answer for each view a reader lands on; follow-up
+    # questions need the live app.
+    asks = [("pulse", {}), ("thread", {}), ("equipment", {})]
+    if serials:
+        asks.append(("serial", {"serial": serials[0]}))
+    asks += [("lot", {"lot": l["lot_id"]}) for l in summary["lots"]
+             if l["inspection_result"] != "Accepted"]
+    asks += [("class", {"class": c}) for c in classes]
+    for pr in presets:
+        d = {k: pr[k] for k in ("kind", "targets", "severity", "durationDays")}
+        d["label"] = pr.get("label", pr["id"])
+        asks += [(t, {"disruption": d}) for t in ("scenario", "ripple", "mitigation", "optimize")]
+    baked, failed = {}, 0
+
+    def one(item):
+        topic, args = item
+        req = urllib.request.Request(
+            HOST + "/api/ask-cortex",
+            data=json.dumps({"topic": topic, "args": args}).encode(),
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=180) as r:
+            return ask_key(topic, args), json.load(r)["text"]
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        for fut in [ex.submit(one, a) for a in asks]:
+            try:
+                k, text = fut.result()
+                baked[k] = text
+            except Exception as e:  # one slow model call should not sink the bake
+                failed += 1
+                print(f"  SKIP  ask-cortex -> {e}")
+    (OUT / "ask_cortex.json").write_text(json.dumps(baked))
+    total += (OUT / "ask_cortex.json").stat().st_size
+    print(f"  baked {len(baked)} Ask Cortex answer(s), {failed} failed")
 
     # The scenario AI needs Snowflake, so report it unavailable rather than
     # advertising a model nobody can reach.

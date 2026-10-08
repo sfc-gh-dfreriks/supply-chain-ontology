@@ -29,7 +29,7 @@ export default function Coverage() {
 
       <ChartCard title="Ontology quality criteria" subtitle="scored against six standard ontology dimensions">
         <div className="space-y-3">
-          {sc.data.items.map((it: any) => {
+          {[...sc.data.items].sort((a: any, b: any) => b.score - a.score).map((it: any) => {
             const c = it.score >= 80 ? "#16a34a" : it.score >= 50 ? "#f59e0b" : "#ef4444";
             return (
               <div key={it.id} className="flex items-center gap-3">

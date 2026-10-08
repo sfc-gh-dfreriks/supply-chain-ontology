@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActionCenter, Bullet, type StageItem } from "../components/ScenarioCharts";
 import {
   DEFAULT_DISRUPTION, KIND_HINT, KIND_LABEL, useNetwork, useScenario,
 } from "../hooks/useScenario";
 import { money, pct } from "../lib/severity";
 import { STATIC } from "../lib/api";
+import { AskCortex } from "../components/AskCortex";
 import type { Disruption, DisruptionKind } from "../lib/api";
 
 /**
@@ -17,10 +18,19 @@ export default function ScenarioStudio() {
 
   const [draft, setDraft] = useState<Disruption>(disruption ?? DEFAULT_DISRUPTION);
 
+  // A preset handed over from the Overview operations pulse ("Simulate today's risks").
+  // Read once at mount: both effects below must agree on whether a hand-off is pending.
+  const handoff = useRef<string | null>(sessionStorage.getItem("sc.preset"));
+  useEffect(() => {
+    const p = handoff.current && presets?.find((x) => x.id === handoff.current);
+    if (p) { sessionStorage.removeItem("sc.preset"); const d = { ...p }; setDraft(d); run(d); }
+  }, [presets]);
+
   // Run the default scenario once so the page never opens empty — an empty studio
   // makes the reader guess what a scenario even looks like here.
   useEffect(() => {
-    if (net && !result && !running && !error) run(draft);
+    // Skip when a preset hand-off is pending, or the default would race it and win.
+    if (net && !result && !running && !error && !handoff.current) run(draft);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [net]);
 
@@ -138,7 +148,9 @@ export default function ScenarioStudio() {
                   onClick={() => { const d = { ...p }; setDraft(d); run(d); }}
                   className={`rounded-lg border p-2.5 text-left transition
                     ${active ? "border-sky-400 bg-sky-50" : "border-gray-200 hover:bg-slate-50"}`}>
-                  <div className="text-xs font-semibold text-slate-800">{p.label}</div>
+                  <div className="text-xs font-semibold text-slate-800">
+                    {p.source === "sc360" && <span className="mr-1.5 rounded bg-sky-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">Live · SC360</span>}
+                    {p.label}</div>
                   <div className="mt-0.5 text-[11px] leading-tight text-slate-500">{p.blurb}</div>
                 </button>
               );
@@ -220,14 +232,22 @@ export default function ScenarioStudio() {
       </div>
 
       {/* headline numbers */}
+      {result && plan && disruption && (
+        <div className="flex justify-end">
+          <AskCortex topic="scenario" args={{ disruption }} label="Ask Cortex: what does this cost us?"
+            suggestions={["Which customers and orders are most exposed?", "What is the cheapest mitigation per dollar protected?", "How does duration change the cost?"]} />
+        </div>
+      )}
       {result && plan && (
         <>
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-6 gap-3">
             {[
               ["Value at risk", money(result.totals.valueAtRisk),
                `${pct(result.totals.pctOfNetwork, 1)} of network`],
               ["Customer revenue", money(result.totals.revenueAtRisk),
                `${result.totals.customersAffected} customers`],
+              ["Cost of disruption", money(result.totals.costOfDisruption ?? 0),
+               `${money(result.totals.lostMargin ?? 0)} margin · ${money(result.totals.latePenalty ?? 0)} penalties`],
               ["Ripple depth", `${result.totals.maxHop} hop${result.totals.maxHop === 1 ? "" : "s"}`,
                `${result.totals.plantsImpaired} plants impaired`],
               ["Protected", money(plan.totals.valueProtected),

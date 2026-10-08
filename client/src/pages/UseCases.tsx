@@ -35,7 +35,7 @@ export default function UseCases() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {list.map((a) => (
+        {[...list].sort((a, b) => b.coverage_pct - a.coverage_pct).map((a) => (
           <button key={a.id} onClick={() => setPick(a.id)}
             className={`rounded-xl border bg-white p-4 text-left shadow-sm transition hover:shadow ${
               selected?.id === a.id ? "border-sf-primary ring-1 ring-sf-primary" : "border-gray-200"}`}>

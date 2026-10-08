@@ -5,6 +5,7 @@ import { dwellMs, usePace } from "../lib/pace";
 import { useNetwork, useScenario, useScenarioMaps } from "../hooks/useScenario";
 import { money } from "../lib/severity";
 import { buildMitSteps } from "../lib/mitsteps";
+import { AskCortex } from "../components/AskCortex";
 
 /**
  * Optimization Map — the recovery played as a movie.
@@ -81,6 +82,12 @@ export default function OptimizeMap() {
 
   return (
     <div className="space-y-4">
+      {disruption && (
+        <div className="flex justify-end">
+          <AskCortex topic="optimize" args={{ disruption }} label="Ask Cortex: is this the best recovery sequence?"
+            suggestions={["What would you do first in the next 48 hours?", "Is any step capacity-constrained?", "What is the cost of doing nothing?"]} />
+        </div>
+      )}
       {/* ---- what scenario this is --------------------------------------- */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2">
         <div className="text-sm font-semibold text-slate-800">

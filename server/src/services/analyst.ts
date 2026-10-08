@@ -18,6 +18,13 @@ const SEMANTIC_VIEW =
   process.env.BDC_SEMANTIC_VIEW ??
   "SAP_BDC_ONTOLOGY.CORE.SAP_BDC_ONTOLOGY_MODEL";
 
+/** Selectable semantic views. Whitelisted: the client sends a key, never a name. */
+export const SEMANTIC_VIEWS: Record<string, { name: string; label: string }> = {
+  catalog: { name: SEMANTIC_VIEW, label: "SAP BDC catalog (data products, CDS entities, processes)" },
+  operations: { name: process.env.SC360_SEMANTIC_VIEW ?? "SAP_SUPPLY_CHAIN.ANALYTICS.SAP_SUPPLY_CHAIN_360",
+                label: "Supply Chain 360 operations (orders, OTIF, tools, components, plants)" },
+};
+
 function resolveHome(p: string): string {
   return p.startsWith("~/") ? path.join(process.env.HOME ?? "", p.slice(2)) : p;
 }
@@ -81,7 +88,7 @@ export interface AskResult {
   requestId?: string;
 }
 
-async function callAnalyst(history: AskTurn[]): Promise<AnalystContent[]> {
+async function callAnalyst(history: AskTurn[], view = SEMANTIC_VIEW): Promise<AnalystContent[]> {
   const account = process.env.SNOWFLAKE_ACCOUNT ?? "";
   const url = `https://${account}.snowflakecomputing.com/api/v2/cortex/analyst/message`;
 
@@ -98,7 +105,7 @@ async function callAnalyst(history: AskTurn[]): Promise<AnalystContent[]> {
       Authorization: `Bearer ${generateJwt()}`,
       "X-Snowflake-Authorization-Token-Type": "KEYPAIR_JWT",
     },
-    body: JSON.stringify({ messages, semantic_view: SEMANTIC_VIEW }),
+    body: JSON.stringify({ messages, semantic_view: view }),
   });
 
   if (!res.ok) {
@@ -154,8 +161,8 @@ export async function runSql(sql: string): Promise<{ columns: string[]; rows: un
   });
 }
 
-export async function ask(history: AskTurn[]): Promise<AskResult> {
-  const content = await callAnalyst(history);
+export async function ask(history: AskTurn[], viewKey = "catalog"): Promise<AskResult> {
+  const content = await callAnalyst(history, (SEMANTIC_VIEWS[viewKey] ?? SEMANTIC_VIEWS.catalog).name);
 
   const answer = content
     .filter((c) => c.type === "text" && c.text)

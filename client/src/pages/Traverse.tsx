@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { GraphCanvas } from "../components/GraphCanvas";
 import { useQuery } from "../hooks/useQuery";
 import { STATIC, api, type PathResult, type TraverseResult } from "../lib/api";
+import { AskCortex } from "../components/AskCortex";
 
 const ROLE_COLOR: Record<string, string> = {
   fact: "#29B5E8", dimension: "#7D44CF", text: "#10b981",
@@ -186,7 +187,10 @@ export default function Traverse() {
         <div className="space-y-4">
           {seedNode && (
             <div className="rounded-lg border border-gray-200 bg-white p-4">
-              <div className="text-xs uppercase tracking-wide text-slate-400">Seed</div>
+              <div className="flex items-center justify-between">
+                <div className="text-xs uppercase tracking-wide text-slate-400">Seed</div>
+                <AskCortex compact topic="neighbourhood" args={{ start: effSeed, depth: String(depth) }} label="What does this mean?" />
+              </div>
               <div className="mt-1 font-semibold text-slate-800">{seedNode.label}</div>
               <div className="text-xs text-slate-500">{seedNode.productLabel}</div>
               <div className="mt-2 flex flex-wrap gap-1">

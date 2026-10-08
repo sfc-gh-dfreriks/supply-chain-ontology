@@ -16,6 +16,9 @@ import ScenarioStudio from "./pages/ScenarioStudio";
 import RippleMap from "./pages/RippleMap";
 import OptimizeMap from "./pages/OptimizeMap";
 import Mitigation from "./pages/Mitigation";
+import DigitalThread from "./pages/DigitalThread";
+import { AskCortex } from "./components/AskCortex";
+import { OperationsPulse } from "./components/OperationsPulse";
 
 const TITLES: Record<PageId, string> = {
   overview: "Portfolio Overview",
@@ -32,6 +35,7 @@ const TITLES: Record<PageId, string> = {
   ripple: "Ripple Map — geography and topology",
   mitigation: "Mitigation Plan",
   optimize: "Optimization Map — the recovery, step by step",
+  thread: "Digital Thread — orders, systems, lots and tools in the graph",
 };
 
 const PAGE_IDS = Object.keys(TITLES) as PageId[];
@@ -62,7 +66,10 @@ export default function App() {
 
   const render = () => {
     switch (page) {
-      case "overview": return <Overview />;
+      case "overview": return (<>
+        <div className="mb-6"><OperationsPulse onNavigate={(p) => setPage(p as PageId)} /></div>
+        <Overview /></>);
+      case "thread": return <DigitalThread />;
       case "model": return <OntologyModel />;
       case "graph": return <Graph />;
       case "traverse": return <Traverse />;

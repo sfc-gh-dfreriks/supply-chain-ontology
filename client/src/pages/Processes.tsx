@@ -10,7 +10,8 @@ export default function Processes() {
   if (proc.error) return <div className="text-sm text-rose-600">{proc.error}</div>;
   if (!proc.data) return <div className="text-sm text-slate-400">Loading…</div>;
 
-  const ordered = [...proc.data].sort((a, b) => (a.code === "NONE" ? 1 : b.code === "NONE" ? -1 : 0));
+  // Largest coverage first; the unassigned bucket always last.
+  const ordered = [...proc.data].sort((a, b) => (a.code === "NONE" ? 1 : b.code === "NONE" ? -1 : b.coverage_pct - a.coverage_pct));
   const selected = ordered.find((r) => r.code === (pick || ordered[0]?.code));
 
   return (

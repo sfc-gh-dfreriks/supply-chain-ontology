@@ -99,7 +99,7 @@ export function ActionCenter({ stages }: {
                   nothing here
                 </div>
               )}
-              {s.items.map((it) => (
+              {[...s.items].sort((a, b) => (b.value ?? 0) - (a.value ?? 0)).map((it) => (
                 <div key={it.key}
                      className={`rounded border px-2 py-1.5 ${TONE[it.tone ?? "info"]}`}>
                   <div className="text-[11px] font-medium leading-tight text-slate-800">
@@ -141,7 +141,7 @@ export function FlowComparison({ rows }: {
   const w = (n: number) => `${Math.max(0.5, (n / max) * 100)}%`;
   return (
     <div className="space-y-2.5">
-      {rows.map((r) => {
+      {[...rows].sort((a, b) => b.baseline - a.baseline).map((r) => {
         const recovered = Math.max(0, r.mitigated - r.disrupted);
         return (
           <div key={r.key}>

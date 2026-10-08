@@ -81,8 +81,22 @@ def main() -> None:
                           f"ORDER BY MATERIAL_CATEGORY, PLANT_NAME"),
                 ("volume", "value", "capable_plants"))
 
+    # Order economics per plant from the operations extension (demo enrichment keyed
+    # to SAP plants): lets the ripple be valued in lost margin and late penalties.
+    econ = clean(rows(cur, """
+        SELECT 'PLT-' || o.PLANT AS node_id, o.PLANT_NAME AS plant_name,
+               ROUND(SUM(o.NET_VALUE_USD) / NULLIF(COUNT(DISTINCT o.SHIP_MONTH), 0)) AS monthly_order_value,
+               ROUND(SUM(o.MARGIN_PER_UNIT_USD * o.ORDER_QTY) / NULLIF(SUM(o.NET_VALUE_USD), 0), 3) AS margin_rate,
+               ROUND(100 * COUNT_IF(o.OTIF) / COUNT(*), 1) AS otif_pct,
+               COUNT_IF(o.ORDER_STATUS LIKE 'Open%') AS open_orders,
+               SUM(IFF(o.ORDER_STATUS LIKE 'Open%', o.NET_VALUE_USD, 0)) AS open_order_value
+          FROM SAP_SUPPLY_CHAIN.ANALYTICS.DT_ORDER_FULFILLMENT o
+         GROUP BY 1, 2 ORDER BY 2"""),
+        ("monthly_order_value", "margin_rate", "otif_pct", "open_orders", "open_order_value"))
+
     payload = {
         "nodes": nodes,
+        "economics": econ,
         "flows": flows,
         "capacity": cap,
         "inventory": inv,

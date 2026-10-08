@@ -229,6 +229,7 @@ export interface ScenarioResult {
     valueAtRisk: number; monthlyNetworkValue: number; pctOfNetwork: number;
     revenueAtRisk: number; customersAffected: number;
     plantsImpaired: number; maxHop: number;
+    lostMargin?: number; latePenalty?: number; costOfDisruption?: number; ordersAtRisk?: number;
   };
   assumptions: string[];
 }
@@ -257,7 +258,7 @@ export interface MitigationPlan {
   actions: string[]; caveats: string[];
 }
 export interface SimulateResponse { result: ScenarioResult; plan: MitigationPlan; }
-export interface Preset extends Disruption { id: string; blurb: string; }
+export interface Preset extends Disruption { id: string; blurb: string; source?: string; }
 
 // ---- ontology schema: the CLASS layer -------------------------------------
 // Mirrors server/src/services/ontologySchema.ts. Distinct from the BDC catalog
@@ -344,7 +345,8 @@ export const api = {
   lenses: () => get<any>("/lenses"),
   askStatus: () => get<AskStatus>("/ask/status"),
   askExamples: () => get<string[]>("/ask/examples"),
-  ask: (history: AskTurn[]) => post<AskResult>("/ask", { history }),
+  ask: (history: AskTurn[], view = "catalog") => post<AskResult>("/ask", { history, view }),
+  askViews: () => get<{ key: string; name: string; label: string }[]>("/ask/views"),
   hubs: (limit = 25) => get<HubRow[]>(`/hubs?limit=${limit}`),
   entities: (q = "", limit = 400) =>
     get<EntityRow[]>(`/entities?q=${encodeURIComponent(q)}&limit=${limit}`),
@@ -364,3 +366,40 @@ export const api = {
   scAsk: (d: Disruption, question: string, history: { role: string; text: string }[]) =>
     post<{ text: string }>("/scenario/ask", { ...d, question, history }),
 };
+
+
+// ---------------------------------------------------------------- digital thread + Ask Cortex
+export const thread = {
+  summary: () => get<any>("/thread"),
+  serial: (sn: string) => get<any>(`/thread/serial/${encodeURIComponent(sn)}`),
+};
+
+/**
+ * Stable key for a baked Ask Cortex answer: topic plus sorted args. A disruption
+ * is keyed by its simulate signature (simName) rather than JSON, so field order
+ * or a label edit cannot break the lookup. Must match ask_key() in
+ * tools/bake_static.py.
+ */
+export function askKey(topic: string, args: Record<string, unknown> = {}): string {
+  const val = (k: string) => k === "disruption" && args[k] ? simName(args[k] as Disruption)
+    : typeof args[k] === "object" ? JSON.stringify(args[k]) : args[k];
+  const a = Object.keys(args).sort().map((k) => `${k}=${val(k)}`).join("&");
+  return a ? `${topic}?${a}` : topic;
+}
+
+/**
+ * Grounded analysis of the view on screen. Live: the server traverses the graph
+ * (or runs the scenario) and passes the result to AI_COMPLETE. Static: answers
+ * for each view's default question are baked by tools/bake_static.py.
+ */
+export async function askCortex(topic: string, args: Record<string, unknown> = {}, question = ""): Promise<string> {
+  if (STATIC) {
+    const res = await fetch(`${SNAP}/ask_cortex.json`);
+    const baked: Record<string, string> = res.ok ? await res.json() : {};
+    return baked[askKey(topic, args)] ??
+      "_Live Cortex analysis needs a Snowflake connection. In this public build only the default analysis for preset views is available._";
+  }
+  return (await post<{ text: string }>("/ask-cortex", { topic, args, question })).text;
+}
+
+export const ops = { pulse: () => get<any>("/operations") };

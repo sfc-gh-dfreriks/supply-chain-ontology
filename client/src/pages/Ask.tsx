@@ -43,6 +43,8 @@ export default function Ask() {
   const status = useQuery(() => api.askStatus(), []);
   const examples = useQuery(() => api.askExamples(), []);
   const [q, setQ] = useState("");
+  const views = useQuery(() => api.askViews(), []);
+  const [view, setView] = useState("catalog");
   const [log, setLog] = useState<Exchange[]>([]);
   const [busy, setBusy] = useState(false);
   const [showSql, setShowSql] = useState<Record<number, boolean>>({});
@@ -66,7 +68,7 @@ export default function Ask() {
     history.push({ role: "user", text });
 
     try {
-      const result = await api.ask(history);
+      const result = await api.ask(history, view);
       setLog((l) => l.map((e, i) => (i === idx ? { question: text, result } : e)));
     } catch (err: any) {
       setLog((l) =>
@@ -112,9 +114,15 @@ export default function Ask() {
           Ask questions about the SAP BDC ontology in plain language. Cortex Analyst
           translates them to SQL against the semantic view and the results are shown below.
         </p>
-        {status.data && (
-          <p className="mt-1 font-mono text-xs text-slate-400">{status.data.semantic_view}</p>
-        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(views.data ?? []).map((v) => (
+            <button key={v.key} onClick={() => { setView(v.key); setLog([]); }}
+              className={`rounded-full border px-3 py-1 text-xs ${view === v.key ? "border-sky-500 bg-sky-500 text-white" : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"}`}>
+              {v.label}</button>
+          ))}
+        </div>
+        <p className="mt-1 font-mono text-xs text-slate-400">
+          {(views.data ?? []).find((v) => v.key === view)?.name ?? status.data?.semantic_view}</p>
       </div>
 
       {!log.length && examples.data && (
