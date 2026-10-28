@@ -21,7 +21,7 @@ import { AskCortex } from "./components/AskCortex";
 import { OperationsPulse } from "./components/OperationsPulse";
 
 const TITLES: Record<PageId, string> = {
-  overview: "Portfolio Overview",
+  overview: "Executive Dashboard",
   model: "Ontology Model — classes and relations",
   graph: "SAP BDC Catalog — data products and CDS entities",
   traverse: "Graph Traversal",
@@ -29,7 +29,7 @@ const TITLES: Record<PageId, string> = {
   usecases: "Use Cases / Intelligent Applications",
   correlation: "Process Correlation",
   coverage: "Coverage & Scorecard",
-  ask: "Ask the Ontology",
+  ask: "Ask Cortex",
   demo: "Guided Demo",
   scenario: "Scenario Studio",
   ripple: "Ripple Map — geography and topology",

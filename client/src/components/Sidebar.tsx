@@ -1,13 +1,13 @@
-import { Network, Workflow, Grid3x3, ShieldCheck, LayoutDashboard, Boxes,
-         MessageSquare, Share2, PlayCircle, CloudLightning, Globe2,
-         Wrench , Route, Layers, Cable} from "lucide-react";
+import { Sparkles, Network, Workflow, Grid3x3, ShieldCheck, LayoutDashboard, Boxes, Share2, PlayCircle, CloudLightning, Globe2,
+         Wrench, Route, Layers, Cable} from "lucide-react";
 
 export type PageId = "overview" | "model" | "graph" | "traverse" | "processes" | "usecases"
                    | "correlation" | "coverage" | "ask" | "demo"
                    | "scenario" | "ripple" | "optimize" | "mitigation" | "thread";
 
 const NAV: { id: PageId; label: string; icon: any }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "ask", label: "Ask Cortex", icon: Sparkles },
+  { id: "overview", label: "Executive Dashboard", icon: LayoutDashboard },
   // The ontology proper sits above the catalog: it is the model the catalog's
   // contents conform to, and the page most people actually want when they say
   // "show me the ontology".
@@ -19,7 +19,6 @@ const NAV: { id: PageId; label: string; icon: any }[] = [
   { id: "usecases", label: "Use Cases / Insight Apps", icon: Boxes },
   { id: "correlation", label: "Correlation", icon: Grid3x3 },
   { id: "coverage", label: "Coverage & Scorecard", icon: ShieldCheck },
-  { id: "ask", label: "Ask the Ontology", icon: MessageSquare },
   { id: "demo", label: "Guided Demo", icon: PlayCircle },
   { id: "scenario", label: "Scenario Studio", icon: CloudLightning },
   { id: "ripple", label: "Ripple Map", icon: Globe2 },
