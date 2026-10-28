@@ -117,7 +117,7 @@ def build_start_here(schema, network):
         doc,
         "Live demo",
         f"{PUBLIC_URL} — credential-free, nothing to install. "
-        "Ask the Ontology and shortest-path traversal are disabled in this build "
+        "Ask Cortex and shortest-path traversal are disabled in this build "
         "because they need a Snowflake connection; see 06_Setup_and_Access.",
     )
 
@@ -190,7 +190,7 @@ def build_start_here(schema, network):
             ],
             [
                 "06_Setup_and_Access.docx",
-                "You need the full version — Ask the Ontology, the scenario pages "
+                "You need the full version — Ask Cortex, the scenario pages "
                 "against live Snowflake — or you want the Snowflake object inventory.",
                 "5 min",
             ],
@@ -309,7 +309,7 @@ def build_quick_start(schema, network):
     )
     bullet(
         doc,
-        "If you want the AI briefing and Ask the Ontology, you need the local build "
+        "If you want the AI briefing and Ask Cortex, you need the local build "
         "with a Snowflake connection — see 06_Setup_and_Access. Decide which build "
         "you are on before the call, not during it.",
     )
@@ -609,7 +609,7 @@ def build_setup(schema, network):
         [
             [
                 "Public web build",
-                "Every page except Ask the Ontology and shortest-path traversal. "
+                "Every page except Ask Cortex and shortest-path traversal. "
                 "Scenario pages, Ripple Map, Mitigation, Optimization Map all work "
                 "from pre-baked snapshots. No credentials, no customer data.",
                 "Nothing — open the URL",
@@ -660,7 +660,7 @@ def build_setup(schema, network):
     doc.add_paragraph()
 
     h1(doc, "What the public build cannot do")
-    bullet(doc, "Ask the Ontology is disabled — Cortex Analyst needs Snowflake credentials.")
+    bullet(doc, "Ask Cortex is disabled — Cortex Analyst needs Snowflake credentials.")
     bullet(
         doc,
         "Shortest path is hidden. The pair space is quadratic, so only expansion "

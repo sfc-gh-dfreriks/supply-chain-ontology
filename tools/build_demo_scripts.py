@@ -508,7 +508,7 @@ def main():
          "“And we measured the shape rather than assuming it. No association crosses a data "
          "product boundary; cross-product linkage runs entirely through one canonical object, "
          "Plant. That is a finding, and the page says so.”"],
-        ["7", "Ask the Ontology", "Ask a question and expand the generated SQL.",
+        ["7", "Ask Cortex", "Ask a question and expand the generated SQL.",
          "“Natural language over a governed semantic view, and it shows you the SQL. The "
          "answer is auditable, not asserted.”"],
         ["8", "Scenario Studio", "Switch to the scenario section.",

@@ -68,7 +68,8 @@ PORT=3009
 
 | Page | What it shows |
 |---|---|
-| Overview | The ontology stack and catalog totals, lenses by source system, industry and provenance |
+| **Ask Cortex** | Page 1. Cortex Analyst over the supply-chain semantic view (formerly "Ask the Ontology") |
+| Executive Dashboard | The ontology stack and catalog totals, lenses by source system, industry and provenance |
 | **Ontology Model** | The 15 classes and 11 relations as a left-to-right tree, each node stating its instance count. Abstract/Concrete/Both toggle — *Concrete* deliberately shows ten disconnected classes, because stripping the abstract layer leaves nothing joining a Supplier to a Customer. Relations are off by default and marked stored, inferred or abstract; selecting an abstract class shows the breakdown that proves the abstraction |
 | SAP BDC Catalog | Process → data product → entity, filterable and expandable. Labels sit below the circles, since a 30-character entity name cannot fit inside an 18px node. Renamed from "Ontology Graph": it is a catalog, not an ontology |
 | Graph Traversal | Breadth-first expansion and shortest association path |
@@ -76,7 +77,6 @@ PORT=3009
 | Use Cases | Mapping to BDC Intelligent Applications |
 | Correlation | Process coupling via the ODM master-data overlay |
 | Coverage & Scorecard | Readiness scoring across the slice |
-| Ask the Ontology | Cortex Analyst over the supply-chain semantic view |
 | Guided Demo | Seven-step walkthrough of the hurricane scenario, with click targets pinned on live components |
 | **Scenario Studio** | Build a disruption from five event types; results bucketed by the response each needs |
 | **Ripple Map** | Geography and topology side by side, selection synced, cascade played one lane at a time with the camera following each beat. A deliberate zoom on the topology panel is preserved across beats, with a **Reset view** control to refit. Each beat carries a subtitle, popout KPI cards showing what changed, and an "explain this step" popover with the arithmetic |

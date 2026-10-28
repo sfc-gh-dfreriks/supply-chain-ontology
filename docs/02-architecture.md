@@ -39,7 +39,7 @@ data/sc_ontology.json          36 products · 338 entities · 281 associations
              SUPPLY_CHAIN_ONTOLOGY_MODEL     semantic view
                      │
                      ▼
-             Cortex Analyst ──▶ "Ask the Ontology" page
+             Cortex Analyst ──▶ "Ask Cortex" page
 ```
 
 The scenario layer is a second, parallel path over different source data. It shares

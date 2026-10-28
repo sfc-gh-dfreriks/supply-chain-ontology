@@ -244,7 +244,7 @@ def s06_flow(prs):
         ("3 · The second hop", "Penang stops too — the part no spreadsheet catches"),
         ("4 · Mitigation", "two reroutes that fit inside real capacity"),
         ("5 · What cannot be saved", "die sorting has no alternative source, at any price"),
-        ("6 · Ask the Ontology", "the cross-type question, in plain English"),
+        ("6 · Ask Cortex", "the cross-type question, in plain English"),
     ], y0=TOP, rh=0.52)
     note(s, "If time allows, run the Penang typhoon second: 0% recoverable, and the contrast makes the structural point.")
     return s
@@ -258,7 +258,7 @@ def s07_walkthrough_section(prs):
          "Mitigation — the plan, bounded by real capacity",
          "Optimization Map — the recovery as a sequence",
          "Ontology Model — why the model answers what a schema cannot",
-         "Ask the Ontology — natural language across abstract classes"],
+         "Ask Cortex — natural language across abstract classes"],
     )
 
 
@@ -342,7 +342,7 @@ def s11_ontology_model(prs, schema):
 
 
 def s12_ask(prs):
-    s = content(prs, "Ask the Ontology", "Three semantic views, and an agent that routes")
+    s = content(prs, "Ask Cortex", "Three semantic views, and an agent that routes")
     grid(s, [
         ("Base semantic view", "concrete lookups — a named plant, a monthly value, spare capacity"),
         ("Ontology semantic view", "cross-type reasoning and class-hierarchy questions"),
@@ -413,7 +413,7 @@ def s16_deployment(prs):
     s = content(prs, "Deployment options", "Three routes, depending on who is in the room")
     grid(s, [
         ("Public web build", "credential-free, nothing to install — Ask and shortest path disabled"),
-        ("Local application", "all 14 pages against live Snowflake, including Ask the Ontology"),
+        ("Local application", "all 14 pages against live Snowflake, including Ask Cortex"),
         ("Snowflake Intelligence only", "the agent and three semantic views, no application needed"),
     ], y0=TOP, rh=0.54)
     card(s, LEFT, TOP + 1.85, FULLW, 1.15, "what is real, and what is modelled", [

@@ -18,7 +18,7 @@ two committed data files — `data/sc_ontology.json` for the ontology pages and
 `data/sc_network.json` for the scenario pages. No Snowflake connection is needed for
 any of them.
 
-Two things need credentials: **Ask the Ontology** (Cortex Analyst) and the **AI
+Two things need credentials: **Ask Cortex** (Cortex Analyst) and the **AI
 briefing** on the Mitigation page (`AI_COMPLETE`). Both state what is missing rather
 than failing silently, and the scenario simulation and optimizer work without them.
 

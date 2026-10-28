@@ -42,7 +42,8 @@ PUBLIC_URL = "https://sfc-gh-dfreriks.github.io/supply-chain-ontology/"
 CONTACT = "dave.freriks@snowflake.com"
 
 PAGES = [
-    ("Overview", "The ontology stack and catalog totals, lenses by source system and provenance"),
+    ("Ask Cortex", "Cortex Analyst over the supply-chain semantic views"),
+    ("Executive Dashboard", "The ontology stack and catalog totals, lenses by source system and provenance"),
     ("Ontology Model", "15 classes and 11 relations as a tree, with instance counts and an Abstract/Concrete toggle"),
     ("SAP BDC Catalog", "Process to data product to entity, filterable and expandable"),
     ("Graph Traversal", "Breadth-first expansion and shortest association path"),
@@ -50,7 +51,6 @@ PAGES = [
     ("Use Cases / Insight Apps", "Mapping to BDC Intelligent Applications"),
     ("Correlation", "Process coupling via the ODM master-data overlay"),
     ("Coverage & Scorecard", "Readiness scoring across the slice"),
-    ("Ask the Ontology", "Cortex Analyst over the supply-chain semantic views"),
     ("Guided Demo", "Seven-step walkthrough of the hurricane scenario"),
     ("Scenario Studio", "Build a disruption from five event types"),
     ("Ripple Map", "Geography and topology side by side, cascade played one lane at a time"),
@@ -374,7 +374,7 @@ def main() -> int:
     callout(
         doc,
         "What the public build cannot do",
-        "Ask the Ontology is disabled because Cortex Analyst needs credentials, and "
+        "Ask Cortex is disabled because Cortex Analyst needs credentials, and "
         "shortest path is hidden because the pair space is quadratic — only "
         "expansion from the 24 most-connected entities is baked. Both are stated on "
         "screen in that build. Commit the baked JSON: the Pages workflow refuses to "
