@@ -246,6 +246,51 @@ list, so a new class is picked up automatically.
 
 ---
 
+## Two ontologies: governed in Snowflake, operational in the app
+
+The same concepts now live in two places, and the app shows both, always badged
+with their source:
+
+| Badge | Source | Holds | Why it is the source |
+|---|---|---|---|
+| **Snowflake Business Ontology** | "Supply Chain" domain on MSB89522 (Snowsight → Catalog → Business Ontology) | definitions, synonyms, status, typed relationships, representations (concept → `VW_ONT_*` view), change history | governed: steward-approved, versioned, access by domain, searchable by Cortex agents |
+| **App ontology** | `SAP_SUPPLY_CHAIN.ONTOLOGY` (`ONT_*`) | abstract flags, depth, typed properties, cardinality and inverse, the substitution rule, class → table filters | Business Ontology has no field for any of these |
+| **Knowledge graph** | `KG_NODE` / `KG_EDGE` | instances, flows, buffers, capacity | data, not concepts; neither ontology stores rows |
+
+Where the native layer replaces app content:
+
+- **Ontology Model page.** The graph defaults to *Snowflake Business Ontology*
+  (21 nodes, 26 relationships, laid out around Plant); *App class model* shows
+  the original tree with abstract/concrete modes. The class panel opens with the
+  governed definition, relationships, representations and history, then the
+  operational model below it. Entity, the app's technical root, has no native
+  node and says so. The relations table gains an *In Business Ontology* column.
+- **Executive Dashboard.** The ontology card shows native counts above the app
+  model counts.
+- **Ask Cortex (class).** The prompt carries both, labelled, and answers name
+  which one each statement came from.
+
+Unchanged: the scenario, ripple, mitigation, optimisation, traversal, catalog
+and digital-thread pages run on instance data and the app model.
+
+The app reads a snapshot, not the live service, for the same static-site reason:
+
+```
+tools/export_business_ontology.py  ->  data/sc_business_ontology.json   (read-only SYSTEM$GET_GLOSSARY_* calls)
+                                       server/src/services/businessOntology.ts
+                                       GET /api/bo/summary · /api/bo/graph
+                                       GET /api/ontology/class/:name  (adds `native`)
+```
+
+Refresh after a steward changes the domain, then re-bake:
+
+```bash
+python3 tools/export_business_ontology.py
+BAKE_HOST=http://localhost:3009 python3 tools/bake_static.py
+```
+
+---
+
 ## Reading the diagrams
 
 Three rendering traps cost real time here, and all three produced output that

@@ -1,0 +1,1155 @@
+{
+ "domain": "Supply Chain",
+ "account": "MSB89522",
+ "exportedAt": "2026-11-13T17:56:11+00:00",
+ "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology",
+ "counts": {
+  "nodes": 21,
+  "relationships": 26,
+  "representations": 18
+ },
+ "nodes": [
+  {
+   "termId": "479851268",
+   "name": "Asset",
+   "fqn": "Supply Chain.Asset",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A physical production asset with a health state. Abstract class covering Equipment. Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [],
+   "appClass": "Asset",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Equipment"
+    }
+   ],
+   "representations": [],
+   "history": {
+    "events": 3,
+    "truncated": false,
+    "last": 1794585798006,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585658734,
+   "lastModifiedOn": 1794585692262,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Asset"
+  },
+  {
+   "termId": "479851332",
+   "name": "Business Process",
+   "fqn": "Supply Chain.Business Process",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "An SAP end-to-end process, e.g. Design to Operate. A kind of Catalog Object. In the supply chain model: A Business Process contains a Data Product (1:N). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "BusinessProcess"
+   ],
+   "appClass": "BusinessProcess",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Catalog Object"
+    },
+    {
+     "type": "HAS_PART",
+     "label": null,
+     "direction": "out",
+     "node": "Data Product"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_BUSINESSPROCESS",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_BUSINESSPROCESS",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 5,
+    "truncated": false,
+    "last": 1794585836768,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585658952,
+   "lastModifiedOn": 1794585692398,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Business%20Process"
+  },
+  {
+   "termId": "479851396",
+   "name": "CDS Entity",
+   "fqn": "Supply Chain.CDS Entity",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A CDS view exposed by a data product. A kind of Catalog Object. In the supply chain model: A CDS Entity is associated with another CDS Entity (N:N). A Data Product exposes a CDS Entity (1:N). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "CDSEntity"
+   ],
+   "appClass": "CDSEntity",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Catalog Object"
+    },
+    {
+     "type": "HAS_PART",
+     "label": null,
+     "direction": "in",
+     "node": "Data Product"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_CDSENTITY",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_CDSENTITY",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 5,
+    "truncated": false,
+    "last": 1794585836935,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585659193,
+   "lastModifiedOn": 1794585692554,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/CDS%20Entity"
+  },
+  {
+   "termId": "479851460",
+   "name": "Catalog Object",
+   "fqn": "Supply Chain.Catalog Object",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "An SAP Business Data Cloud catalog artefact. Kept as a separate branch: it describes what data exists, not what the supply chain is. Abstract class covering Business Process, Data Product, CDS Entity. Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "CatalogObject"
+   ],
+   "appClass": "CatalogObject",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Business Process"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "CDS Entity"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Data Product"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_CATALOGOBJECT",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_CATALOGOBJECT",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 6,
+    "truncated": false,
+    "last": 1794585837153,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585659381,
+   "lastModifiedOn": 1794585692723,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Catalog%20Object"
+  },
+  {
+   "termId": "479851272",
+   "name": "Component Lot",
+   "fqn": "Supply Chain.Component Lot",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A received supplier lot of a BOM component, with inspection result. A kind of Item. In the supply chain model: A Component Lot is supplied by a Supplier (N:1). A System Serial contains a Component Lot (N:N). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "ComponentLot"
+   ],
+   "appClass": "ComponentLot",
+   "edges": [
+    {
+     "type": "CUSTOM",
+     "label": "supplied by",
+     "direction": "out",
+     "node": "Supplier"
+    },
+    {
+     "type": "HAS_PART",
+     "label": null,
+     "direction": "in",
+     "node": "System Serial"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Item"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_COMPONENTLOT",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_COMPONENTLOT",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 6,
+    "truncated": false,
+    "last": 1794588054457,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585659577,
+   "lastModifiedOn": 1794585692870,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Component%20Lot"
+  },
+  {
+   "termId": "122841923845",
+   "name": "Customer",
+   "fqn": "Supply Chain.Customer",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "An organisation that receives finished output. A kind of Party. In the supply chain model: A Plant ships to a Customer (N:N). A Sales Order is placed by a Customer (N:1). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [],
+   "appClass": "Customer",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Party"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "placed by",
+     "direction": "in",
+     "node": "Sales Order"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "ships to",
+     "direction": "in",
+     "node": "Plant"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_CUSTOMER",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_CUSTOMER",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 6,
+    "truncated": false,
+    "last": 1794588054296,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585659760,
+   "lastModifiedOn": 1794585693056,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Customer"
+  },
+  {
+   "termId": "122841923909",
+   "name": "Data Product",
+   "fqn": "Supply Chain.Data Product",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A BDC data product exposing CDS entities. A kind of Catalog Object. In the supply chain model: A Business Process contains a Data Product (1:N). A Data Product exposes a CDS Entity (1:N). A Data Product shares a canonical object with another Data Product (N:N). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "DataProduct"
+   ],
+   "appClass": "DataProduct",
+   "edges": [
+    {
+     "type": "HAS_PART",
+     "label": null,
+     "direction": "in",
+     "node": "Business Process"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Catalog Object"
+    },
+    {
+     "type": "HAS_PART",
+     "label": null,
+     "direction": "out",
+     "node": "CDS Entity"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_DATAPRODUCT",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_DATAPRODUCT",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 6,
+    "truncated": false,
+    "last": 1794585837690,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585659899,
+   "lastModifiedOn": 1794585693339,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Data%20Product"
+  },
+  {
+   "termId": "122841923973",
+   "name": "Equipment",
+   "fqn": "Supply Chain.Equipment",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A production tool (stepper, etcher, CVD chamber, assembly cell) at a work center. A kind of Asset. In the supply chain model: An Equipment is installed at a Plant (N:1). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [],
+   "appClass": "Equipment",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Asset"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "installed at",
+     "direction": "out",
+     "node": "Plant"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_EQUIPMENT",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_EQUIPMENT",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 5,
+    "truncated": false,
+    "last": 1794588053593,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585660085,
+   "lastModifiedOn": 1794585693502,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Equipment"
+  },
+  {
+   "termId": "122841924037",
+   "name": "Facility",
+   "fqn": "Supply Chain.Facility",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A physical site with capacity. Abstract: the network has only plants today, but distribution centres and contract manufacturers are the same kind of thing. Abstract class covering Plant. Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [],
+   "appClass": "Facility",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Plant"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_FACILITY",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_FACILITY",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 4,
+    "truncated": false,
+    "last": 1794585838620,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585660390,
+   "lastModifiedOn": 1794585693661,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Facility"
+  },
+  {
+   "termId": "122841924101",
+   "name": "Inbound Flow",
+   "fqn": "Supply Chain.Inbound Flow",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "Supplier to plant. A kind of Material Flow. Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "InboundFlow"
+   ],
+   "appClass": "InboundFlow",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Material Flow"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_INBOUNDFLOW",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_INBOUNDFLOW",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 4,
+    "truncated": false,
+    "last": 1794585838778,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585660583,
+   "lastModifiedOn": 1794585693816,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Inbound%20Flow"
+  },
+  {
+   "termId": "122841924165",
+   "name": "Inter Plant Flow",
+   "fqn": "Supply Chain.Inter Plant Flow",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "Plant to plant. The mechanism by which a disruption travels. A kind of Material Flow. Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "InterPlantFlow"
+   ],
+   "appClass": "InterPlantFlow",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Material Flow"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_INTERPLANTFLOW",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_INTERPLANTFLOW",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 4,
+    "truncated": false,
+    "last": 1794585838946,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585660744,
+   "lastModifiedOn": 1794585693958,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Inter%20Plant%20Flow"
+  },
+  {
+   "termId": "479851336",
+   "name": "Item",
+   "fqn": "Supply Chain.Item",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A traceable physical unit. Abstract class covering System Serial, Component Lot. Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [],
+   "appClass": "Item",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "System Serial"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Component Lot"
+    }
+   ],
+   "representations": [],
+   "history": {
+    "events": 4,
+    "truncated": false,
+    "last": 1794585798494,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585660888,
+   "lastModifiedOn": 1794585694114,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Item"
+  },
+  {
+   "termId": "122841924169",
+   "name": "Material Category",
+   "fqn": "Supply Chain.Material Category",
+   "kind": "TERM",
+   "status": "ACTIVE",
+   "description": "A class of material the network moves. Sole-source risk is a property of a category, not of a plant, which is why it needs to be its own class. In the supply chain model: A Material Flow carries a Material Category (N:1). A Plant produces a Material Category (N:N). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "MaterialCategory"
+   ],
+   "appClass": "MaterialCategory",
+   "edges": [
+    {
+     "type": "CLASSIFIES",
+     "label": null,
+     "direction": "out",
+     "node": "Material Flow"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "produces",
+     "direction": "in",
+     "node": "Plant"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_MATERIALCATEGORY",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_MATERIALCATEGORY",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 5,
+    "truncated": false,
+    "last": 1794588053953,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585661006,
+   "lastModifiedOn": 1794585694246,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Material%20Category"
+  },
+  {
+   "termId": "122841923913",
+   "name": "Material Flow",
+   "fqn": "Supply Chain.Material Flow",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A recurring movement of one material category between two entities, carrying monthly volume and value. Reified as a class because the flow itself has attributes the endpoints do not. Abstract class covering Inbound Flow, Outbound Flow, Inter Plant Flow. In the supply chain model: A Material Flow carries a Material Category (N:1). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "MaterialFlow"
+   ],
+   "appClass": "MaterialFlow",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Inbound Flow"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Outbound Flow"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Inter Plant Flow"
+    },
+    {
+     "type": "CLASSIFIES",
+     "label": null,
+     "direction": "in",
+     "node": "Material Category"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_MATERIALFLOW",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_MATERIALFLOW",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 7,
+    "truncated": false,
+    "last": 1794585839227,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585661132,
+   "lastModifiedOn": 1794585694383,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Material%20Flow"
+  },
+  {
+   "termId": "122841924229",
+   "name": "Outbound Flow",
+   "fqn": "Supply Chain.Outbound Flow",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "Plant to customer. Where revenue is at risk. A kind of Material Flow. Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "OutboundFlow"
+   ],
+   "appClass": "OutboundFlow",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Material Flow"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_OUTBOUNDFLOW",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_OUTBOUNDFLOW",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 4,
+    "truncated": false,
+    "last": 1794585839445,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585661328,
+   "lastModifiedOn": 1794585694515,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Outbound%20Flow"
+  },
+  {
+   "termId": "122841924293",
+   "name": "Party",
+   "fqn": "Supply Chain.Party",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "An external organisation the network trades with. Abstract, so a question about 'who is affected' can span suppliers and customers in one answer. Abstract class covering Supplier, Customer. Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [],
+   "appClass": "Party",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Customer"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Supplier"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_PARTY",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_PARTY",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 5,
+    "truncated": false,
+    "last": 1794585839586,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585661520,
+   "lastModifiedOn": 1794585694647,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Party"
+  },
+  {
+   "termId": "122841924357",
+   "name": "Plant",
+   "fqn": "Supply Chain.Plant",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A manufacturing site. Carries capacity (work centres, hours, spare units) and inventory (days of cover, stock value) as properties, because both are 1:1 with the plant rather than entities in their own right. A kind of Facility. In the supply chain model: A Plant can substitute for another Plant (N:N). A Plant produces a Material Category (N:N). A Plant ships to a Customer (N:N). A Plant transfers material to another Plant (N:N). A Sales Order is fulfilled by a Plant (N:1). A Supplier supplies a Plant (N:N). A System Serial is built at a Plant (N:1). An Equipment is installed at a Plant (N:1). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [],
+   "appClass": "Plant",
+   "edges": [
+    {
+     "type": "CUSTOM",
+     "label": "fulfilled by",
+     "direction": "in",
+     "node": "Sales Order"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "installed at",
+     "direction": "in",
+     "node": "Equipment"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Facility"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "supplies",
+     "direction": "in",
+     "node": "Supplier"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "built at",
+     "direction": "in",
+     "node": "System Serial"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "produces",
+     "direction": "out",
+     "node": "Material Category"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "ships to",
+     "direction": "out",
+     "node": "Customer"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_PLANT",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_PLANT",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 10,
+    "truncated": false,
+    "last": 1794588054654,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585661719,
+   "lastModifiedOn": 1794585694808,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Plant"
+  },
+  {
+   "termId": "122841924105",
+   "name": "Sales Order",
+   "fqn": "Supply Chain.Sales Order",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A customer order line for an inspection system, with OTIF outcome and late cost. A kind of Transaction. In the supply chain model: A Sales Order is fulfilled by a Plant (N:1). A Sales Order is placed by a Customer (N:1). A System Serial is shipped on a Sales Order (N:1). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "SalesOrder"
+   ],
+   "appClass": "SalesOrder",
+   "edges": [
+    {
+     "type": "CUSTOM",
+     "label": "fulfilled by",
+     "direction": "out",
+     "node": "Plant"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "shipped on",
+     "direction": "in",
+     "node": "System Serial"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "placed by",
+     "direction": "out",
+     "node": "Customer"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Transaction"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_SALESORDER",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_SALESORDER",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 7,
+    "truncated": false,
+    "last": 1794588054118,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585661883,
+   "lastModifiedOn": 1794585694951,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Sales%20Order"
+  },
+  {
+   "termId": "122841923977",
+   "name": "Supplier",
+   "fqn": "Supply Chain.Supplier",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "An organisation that ships material into a plant. A kind of Party. In the supply chain model: A Component Lot is supplied by a Supplier (N:1). A Supplier supplies a Plant (N:N). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [],
+   "appClass": "Supplier",
+   "edges": [
+    {
+     "type": "CUSTOM",
+     "label": "supplied by",
+     "direction": "in",
+     "node": "Component Lot"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "supplies",
+     "direction": "out",
+     "node": "Plant"
+    },
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Party"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_SUPPLIER",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_SUPPLIER",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 6,
+    "truncated": false,
+    "last": 1794588054654,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585662006,
+   "lastModifiedOn": 1794585695140,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Supplier"
+  },
+  {
+   "termId": "122841924421",
+   "name": "System Serial",
+   "fqn": "Supply Chain.System Serial",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "One built inspection system, identified by serial number. A kind of Item. In the supply chain model: A System Serial contains a Component Lot (N:N). A System Serial is built at a Plant (N:1). A System Serial is shipped on a Sales Order (N:1). Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [
+    "SystemSerial"
+   ],
+   "appClass": "SystemSerial",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "out",
+     "node": "Item"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "shipped on",
+     "direction": "out",
+     "node": "Sales Order"
+    },
+    {
+     "type": "CUSTOM",
+     "label": "built at",
+     "direction": "out",
+     "node": "Plant"
+    },
+    {
+     "type": "HAS_PART",
+     "label": null,
+     "direction": "out",
+     "node": "Component Lot"
+    }
+   ],
+   "representations": [
+    {
+     "object": "VW_ONT_SYSTEMSERIAL",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_SYSTEMSERIAL",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    }
+   ],
+   "history": {
+    "events": 7,
+    "truncated": false,
+    "last": 1794588054118,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585662205,
+   "lastModifiedOn": 1794585695259,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/System%20Serial"
+  },
+  {
+   "termId": "122841924041",
+   "name": "Transaction",
+   "fqn": "Supply Chain.Transaction",
+   "kind": "ENTITY",
+   "status": "ACTIVE",
+   "description": "A business document that commits the supply chain to deliver. Abstract class covering Sales Order. Source: Supply Chain Ontology app, SAP_SUPPLY_CHAIN.ONTOLOGY.",
+   "synonyms": [],
+   "appClass": "Transaction",
+   "edges": [
+    {
+     "type": "IS_A",
+     "label": null,
+     "direction": "in",
+     "node": "Sales Order"
+    }
+   ],
+   "representations": [],
+   "history": {
+    "events": 3,
+    "truncated": false,
+    "last": 1794585798160,
+    "changedBy": [
+     "DFRERIKS"
+    ]
+   },
+   "createdOn": 1794585662365,
+   "lastModifiedOn": 1794585695404,
+   "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology/domain/Supply%20Chain/entity/Transaction"
+  }
+ ],
+ "relationships": [
+  {
+   "source": "Business Process",
+   "target": "Catalog Object",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Component Lot",
+   "target": "Supplier",
+   "type": "CUSTOM",
+   "label": "supplied by"
+  },
+  {
+   "source": "Customer",
+   "target": "Party",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "System Serial",
+   "target": "Item",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Equipment",
+   "target": "Asset",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Sales Order",
+   "target": "Plant",
+   "type": "CUSTOM",
+   "label": "fulfilled by"
+  },
+  {
+   "source": "Equipment",
+   "target": "Plant",
+   "type": "CUSTOM",
+   "label": "installed at"
+  },
+  {
+   "source": "Plant",
+   "target": "Facility",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "CDS Entity",
+   "target": "Catalog Object",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Inbound Flow",
+   "target": "Material Flow",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "System Serial",
+   "target": "Sales Order",
+   "type": "CUSTOM",
+   "label": "shipped on"
+  },
+  {
+   "source": "Supplier",
+   "target": "Plant",
+   "type": "CUSTOM",
+   "label": "supplies"
+  },
+  {
+   "source": "Outbound Flow",
+   "target": "Material Flow",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Inter Plant Flow",
+   "target": "Material Flow",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Sales Order",
+   "target": "Customer",
+   "type": "CUSTOM",
+   "label": "placed by"
+  },
+  {
+   "source": "System Serial",
+   "target": "Plant",
+   "type": "CUSTOM",
+   "label": "built at"
+  },
+  {
+   "source": "Material Category",
+   "target": "Material Flow",
+   "type": "CLASSIFIES",
+   "label": null
+  },
+  {
+   "source": "System Serial",
+   "target": "Component Lot",
+   "type": "HAS_PART",
+   "label": null
+  },
+  {
+   "source": "Supplier",
+   "target": "Party",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Business Process",
+   "target": "Data Product",
+   "type": "HAS_PART",
+   "label": null
+  },
+  {
+   "source": "Plant",
+   "target": "Material Category",
+   "type": "CUSTOM",
+   "label": "produces"
+  },
+  {
+   "source": "Data Product",
+   "target": "Catalog Object",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Component Lot",
+   "target": "Item",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Sales Order",
+   "target": "Transaction",
+   "type": "IS_A",
+   "label": null
+  },
+  {
+   "source": "Data Product",
+   "target": "CDS Entity",
+   "type": "HAS_PART",
+   "label": null
+  },
+  {
+   "source": "Plant",
+   "target": "Customer",
+   "type": "CUSTOM",
+   "label": "ships to"
+  }
+ ]
+}

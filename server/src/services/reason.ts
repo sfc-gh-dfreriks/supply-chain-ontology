@@ -19,7 +19,7 @@ import { runSql } from "./analyst.js";
 import type { ScenarioResult } from "./scenario.js";
 import type { MitigationPlan } from "./mitigate.js";
 
-const MODEL = process.env.SCENARIO_LLM_MODEL ?? "claude-4-sonnet";
+const MODEL = process.env.SCENARIO_LLM_MODEL ?? "claude-opus-5-5";
 
 export function reasoningConfigured(): { ok: boolean; missing: string[] } {
   const missing = ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PRIVATE_KEY_PATH"]

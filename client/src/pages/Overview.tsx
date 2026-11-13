@@ -2,6 +2,7 @@ import { useQuery } from "../hooks/useQuery";
 import { api } from "../lib/api";
 import { MetricCard, ChartCard, ProcessBadge, Bar } from "../components/Cards";
 import { LayerStack } from "../components/LayerStack";
+import { SourceBadge, asOfDate } from "../components/SourceBadge";
 
 export default function Overview() {
   const meta = useQuery(() => api.meta(), []);
@@ -11,6 +12,7 @@ export default function Overview() {
   // The ontology layer is served separately from the BDC catalog; a failure here
   // must not blank the page, so it is rendered only when present.
   const schema = useQuery(() => api.ontologySchema(), []);
+  const bo = useQuery(() => api.boSummary(), []);
 
   if (meta.error) return <Err msg={meta.error} />;
   if (!meta.data || !sc.data || !proc.data) return <Loading />;
@@ -29,8 +31,24 @@ export default function Overview() {
       {schema.data && (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <ChartCard title="Supply-chain ontology"
-            subtitle="the abstract model, deployed in Snowflake"
+            subtitle="the same concepts in two places: governed in Snowflake, operational in the app"
             className="lg:col-span-2">
+            {bo.data?.available && (
+              <div className="mb-3 rounded-lg bg-sky-50/60 p-3 ring-1 ring-sky-200">
+                <SourceBadge source="native" asOf={asOfDate(bo.data.exportedAt)} href={bo.data.snowsightUrl} />
+                <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Stat value={bo.data.counts.nodes} label="governed nodes" sub={`domain ${bo.data.domain}`} tone="text-[#29B5E8]" />
+                  <Stat value={bo.data.counts.relationships} label="relationships" sub="typed, approved" tone="text-[#29B5E8]" />
+                  <Stat value={bo.data.counts.representations} label="representations" sub="concept → view" tone="text-[#29B5E8]" />
+                  <Stat value="Active" label="status" sub="steward-approved" tone="text-emerald-600" />
+                </div>
+                <p className="mt-2 text-[11.5px] leading-relaxed text-slate-600">
+                  What each concept <b>means</b>, approved and versioned in Horizon Catalog, where Cortex agents and
+                  every Snowflake user can find it.
+                </p>
+              </div>
+            )}
+            <div className="mb-2"><SourceBadge source="app" /></div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat value={oc?.classes} label="classes"
                 sub={oc ? `${oc.abstract} abstract` : ""} tone="text-[#1B3A57]" />
@@ -41,7 +59,7 @@ export default function Overview() {
               <Stat value={3} label="semantic views" sub="+ 1 agent" tone="text-purple-600" />
             </div>
             <p className="mt-3 border-t border-gray-100 pt-3 text-[12px] leading-relaxed text-slate-600">
-              Five abstract classes carry no rows of their own &mdash; they are unions over
+              The operational model is what the scenarios reason with. Five abstract classes carry no rows of their own &mdash; they are unions over
               their children. That is what lets one query span several concrete types:
               asking for <span className="font-medium">parties</span> returns all 8 customers
               and 6 suppliers together. The catalog figures below answer a different

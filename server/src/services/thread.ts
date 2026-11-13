@@ -12,9 +12,10 @@ import { runSql } from "./analyst.js";
 import { loadNetwork, simulate, type Disruption } from "./scenario.js";
 import { mitigate } from "./mitigate.js";
 import { loadSchema, classDetail } from "./ontologySchema.js";
+import { loadBusinessOntology, boNodeFor } from "./businessOntology.js";
 import { traverse } from "./traverse.js";
 
-const MODEL = process.env.SCENARIO_LLM_MODEL ?? "claude-4-sonnet";
+const MODEL = process.env.SCENARIO_LLM_MODEL ?? "claude-opus-5-5";
 let _t: any = null;
 
 export function loadThread(): any {
@@ -66,7 +67,9 @@ a knowledge graph built from SAP Business Data Cloud data products plus demo enr
 component lots). Treat them as authoritative; never invent numbers. Lead with the direct answer, then
 evidence (a small markdown table when comparing), then 2-4 concrete actions. Name the relationships you
 followed (e.g. ComponentLot -usedIn-> SystemSerial -shippedOn-> SalesOrder -placedBy-> Customer).
-Under 300 words.`;
+When the facts include governed_definition_snowflake_business_ontology, take the concept's meaning from it
+and say "governed definition (Snowflake Business Ontology)"; take abstract flags, properties, cardinality and
+rules from operational_model_app and say "app model". Under 300 words.`;
 
 function factsFor(topic: string, args: Record<string, any>): unknown {
   const t = loadThread();
@@ -95,7 +98,14 @@ function factsFor(topic: string, args: Record<string, any>): unknown {
     case "class": {
       const name = String(args.class);
       const detail = (() => { try { return classDetail(loadSchema(), name); } catch { return null; } })();
-      return { class: name, detail, schema_summary: (loadSchema() as any).summary ?? null,
+      const gov = boNodeFor(loadBusinessOntology(), name);
+      // Two sources, labelled so the answer can say which it used: the governed
+      // definition from Snowflake Business Ontology, and the app's operational model.
+      return { class: name,
+               governed_definition_snowflake_business_ontology: gov
+                 ? { node: gov.fqn, status: gov.status, definition: gov.description, relationships: gov.edges, representations: gov.representations }
+                 : null,
+               operational_model_app: detail, schema_summary: (loadSchema() as any).summary ?? null,
                instances_from_operations: loadThread().classes.find((c: any) => c.class_name === name) ?? null };
     }
     case "neighbourhood": {

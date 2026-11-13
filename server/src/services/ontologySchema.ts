@@ -98,7 +98,7 @@ export type ClassMode = "abstract" | "concrete" | "both";
  * and labelled in white, and a mid-tone like #29B5E8 gives roughly 2.3:1 against
  * white — unreadable. Every colour below clears 4.5:1.
  */
-function branchColor(sch: OntologySchema, name: string): string {
+export function branchColor(sch: OntologySchema, name: string): string {
   // Walk up to the branch directly beneath Entity.
   const byName = new Map(sch.classes.map((c) => [c.name, c]));
   let cur = byName.get(name);
@@ -154,7 +154,7 @@ function classBox(sch: OntologySchema, c: OntClass): { w: number; h: number; tw:
  * Left to right rather than top down because class names are long horizontal
  * words; ranks as columns give each label room without crowding its siblings.
  */
-function treePositions(
+export function treePositions(
   sch: OntologySchema,
   kept: OntClass[],
 ): Map<string, { x: number; y: number }> {

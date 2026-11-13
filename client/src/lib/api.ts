@@ -311,7 +311,28 @@ export interface OntologySchema {
   relations: OntRelation[];
   abstract_rollup: Record<string, AbstractRollup>;
 }
+// ---- Snowflake Business Ontology: the GOVERNED layer ----------------------
+// Mirrors server/src/services/businessOntology.ts. Kept as its own types so a
+// component always knows whether a field is native or from the app model.
+export interface BoEdge { type: string; label: string | null; direction: "out" | "in"; node: string | null }
+export interface BoRepresentation { object: string; fqn: string; objectType: string; role: string; validity: string | null }
+export interface BoNode {
+  termId: string; name: string; fqn: string; kind: string; status: string | null;
+  description: string | null; synonyms: string[]; appClass: string;
+  edges: BoEdge[]; representations: BoRepresentation[];
+  history: { events: number; truncated: boolean; last: number | null; changedBy: string[] };
+  createdOn: number | null; lastModifiedOn: number | null; snowsightUrl: string;
+}
+export type BoSummary =
+  | { available: false }
+  | { available: true; domain: string; account: string; exportedAt: string; snowsightUrl: string;
+      counts: { nodes: number; relationships: number; representations: number };
+      kinds: Record<string, number>; relationshipTypes: Record<string, number> };
+
 export interface ClassDetail {
+  /** the governed node for this class; null for Entity, the app's technical root */
+  native?: BoNode | null;
+  nativeAvailable?: boolean;
   cls: OntClass;
   children: OntClass[];
   ancestors: { ancestor: string; depth: number }[];
@@ -334,6 +355,10 @@ export const api = {
     ),
   classDetail: (name: string) =>
     get<ClassDetail>(`/ontology/class/${encodeURIComponent(name)}`),
+
+  // ---- Snowflake Business Ontology (the governed layer) ------------------
+  boSummary: () => get<BoSummary>("/bo/summary"),
+  boGraph: () => get<{ elements: any[]; counts: Record<string, number>; exportedAt: string }>("/bo/graph"),
 
   products: (o: GraphOpts) => get<ProductRow[]>(`/products${gq({ ...o, expand: null, cross: undefined })}`),
   processes: () => get<any[]>("/processes"),

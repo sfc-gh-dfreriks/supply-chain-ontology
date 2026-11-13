@@ -111,7 +111,9 @@ def main() -> None:
              "/ontology/schema",
              "/ontology/class-graph?mode=both",
              "/ontology/class-graph?mode=abstract",
-             "/ontology/class-graph?mode=concrete"]
+             "/ontology/class-graph?mode=concrete",
+             # Snowflake Business Ontology, the governed layer of the same model
+             "/bo/summary", "/bo/graph"]
 
     # one snapshot per ontology class, for the detail panel. Driven off the
     # schema rather than a hardcoded list so a new class is picked up

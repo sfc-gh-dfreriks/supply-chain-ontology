@@ -2,6 +2,8 @@ import { Router } from "express";
 import { loadOntology, buildGraph } from "../services/ontology.js";
 import { loadSchema, buildClassGraph, classDetail, type ClassMode }
   from "../services/ontologySchema.js";
+import { loadBusinessOntology, boSummary, boNodeFor, buildBoGraph }
+  from "../services/businessOntology.js";
 import { ask, askConfigured, semanticView, SEMANTIC_VIEWS } from "../services/analyst.js";
 import { traverse, shortestPath, hubs, topology } from "../services/traverse.js";
 import { loadNetwork, simulate, type Disruption, type DisruptionKind }
@@ -113,7 +115,26 @@ apiRouter.get("/api/ontology/class/:name", wrap((req, res) => {
     res.status(404).json({ error: `No such class: ${req.params.name}` });
     return;
   }
-  res.json(detail);
+  // The governed side of the same concept, when Snowflake Business Ontology has
+  // it. Entity, the app's technical root, has no native node by design.
+  const bo = loadBusinessOntology();
+  res.json({ ...detail, native: boNodeFor(bo, detail.cls.name), nativeAvailable: !!bo });
+}));
+
+// ---------------------------------------------------------------------------
+// Snowflake Business Ontology — the governed layer of the same model. Served
+// beside /api/ontology/* rather than merged into it, so a client always knows
+// which source a field came from.
+// ---------------------------------------------------------------------------
+
+apiRouter.get("/api/bo/summary", wrap((_req, res) => {
+  res.json(boSummary(loadBusinessOntology()));
+}));
+
+apiRouter.get("/api/bo/graph", wrap((_req, res) => {
+  const bo = loadBusinessOntology();
+  if (!bo) { res.status(404).json({ error: "Business Ontology export not found. Run: python3 tools/export_business_ontology.py" }); return; }
+  res.json({ elements: buildBoGraph(bo, loadSchema()), counts: bo.counts, exportedAt: bo.exportedAt });
 }));
 
 apiRouter.get("/api/products", wrap((req, res) => {
