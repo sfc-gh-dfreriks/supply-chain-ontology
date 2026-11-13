@@ -1,5 +1,12 @@
 # 08 — The ontology layer
 
+> **Current state (13 Nov 2026):** the app now runs entirely on Snowflake
+> Business Ontology; see [The app is built on Snowflake Business Ontology](#the-app-is-built-on-snowflake-business-ontology)
+> below. The sections before it are **history**: how the app-owned layer in
+> `SAP_SUPPLY_CHAIN.ONTOLOGY` was designed, and the pages it served (SAP BDC
+> Catalog, Graph Traversal, Correlation, Cortex Analyst), all since removed.
+> They are kept because the governed domain was derived from that layer.
+
 The app began as a viewer over the SAP Business Data Cloud catalog: business
 processes, data products, CDS entities. That catalog is real and useful, but it
 was labelled "the ontology", and it is not one. This document covers the layer

@@ -5,15 +5,15 @@ supply-chain network.
 
 ---
 
-## Why this needed a different data foundation
+## The data foundation
 
-The BDC catalog ontology in the rest of this app is **metadata about data
-products** — 36 products, 338 CDS entities. It has no plant instances, no
-material flows, no inventory. It cannot answer "a hurricane hits Austin, what
-happens", and pretending otherwise would be dishonest.
-
-Scenario modelling therefore runs on `SAP_SUPPLY_CHAIN`, which does have a
-network:
+The network is read through Snowflake Business Ontology: the domain is walked
+to find suppliers, plants and customers (endpoints of **supplies** and **ships
+to**), material flows (the IS_A kinds of what Material Category classifies),
+capacity and inventory (Plant), substitution (Plant **produces** Material
+Category) and order economics (Sales Order **fulfilled by** Plant). Each is read
+from the representation linked to that concept. See
+[concepts](01-concepts.md#built-on-the-ontology-not-beside-it).
 
 | | |
 |---|---|
@@ -21,9 +21,10 @@ Nodes | **19** with real lat/lon — 5 plants, 6 suppliers, 8 customers |
 Flows | **27** — 12 inbound, 4 inter-plant, 11 outbound, **$56.7M/month** |
 Constraints | work-center capacity, inventory days, observed substitutability |
 
-The ontology still earns its place: it explains *what* these objects are and
-which SAP data products describe them. The scenario engine says what happens to
-them.
+The ontology says what these objects are and how they relate; the scenario
+engine says what happens to them. What the ontology cannot express — transfer
+as an edge, cardinality, the substitution rule, buffer timing — lives in the
+engine's code.
 
 ---
 
@@ -155,12 +156,11 @@ feasible reroutes; see [findings](05-findings.md#the-rate-mismatch).
 
 ## AI reasoning
 
-`AI_COMPLETE` with `claude-4-sonnet`, not Cortex Analyst.
+`AI_COMPLETE` with `claude-opus-5-5`, not a text-to-SQL tool.
 
-Analyst answers questions about data in tables. A scenario is a hypothetical the
-engine just computed in memory — the ripple and the reroutes are nowhere in
-Snowflake to query, so Analyst would dutifully query the *undisrupted* network
-and answer the wrong question.
+A scenario is a hypothetical the engine just computed in memory — the ripple and
+the reroutes are nowhere in Snowflake to query, so a text-to-SQL tool would
+query the *undisrupted* network and answer the wrong question.
 
 So the computed scenario is passed as facts and the model interprets rather than
 calculates. Every figure comes from the deterministic engine; the model
@@ -190,13 +190,13 @@ Staged action pipeline by required response | Scenario Studio |
 Bullet charts for capacity and buffer | Studio, Mitigation |
 Before/after flow comparison | Mitigation |
 Step animation of the cascade | Ripple Map, lettered sub-steps; auto-plays in the Guided Demo |
-Camera framing per beat | Ripple Map and Optimization Map, "follow with zoom" |
+Camera framing per beat | Ripple Map and Mitigation & Recovery, "follow with zoom" |
 Annotation pins on click targets | Guided Demo |
 Burned-in subtitle per beat | both animated maps, `SubtitleBand` |
 Popout KPI cards showing before → after | both animated maps, `KpiCards` |
 Arithmetic on demand per beat | both animated maps, `ExplainStep` |
-Replaced lane struck through beside its replacement | Optimization Map, change card |
-Recovery progress bar, protected against residual | Optimization Map |
+Replaced lane struck through beside its replacement | Mitigation & Recovery, change card |
+Recovery progress bar, protected against residual | Mitigation & Recovery |
 User-set seconds per step | both animated maps, `PaceControl` |
 
 **Gauges and pie charts are avoided deliberately** — the Ventagium guidance is
@@ -270,7 +270,7 @@ Beats that impair a downstream site dwell longer during playback (3.4s against
 
 ## The recovery as a movie
 
-The Ripple Map answers what breaks. The Optimization Map answers what to do about
+The Ripple Map answers what breaks. The recovery movie on Mitigation & Recovery answers what to do about
 it, and needs a different spine: the optimizer emits a list of decisions, so each
 decision becomes one beat — the lane that died, the lane replacing it, and what the
 plant picking up the work gives up.
@@ -341,27 +341,25 @@ map stays in view while it is being driven.
 ## Running it
 
 ```bash
-npm run deploy-scenario   # create SAP_SUPPLY_CHAIN.SCENARIO views
-npm run export-network    # export to data/sc_network.json
+npm run export-network    # walk the domain into data/sc_network.json
 npm run build-land        # fetch and convert the land outline (once)
-npm run verify-scenario   # 20 assertions across all 5 disruption kinds
+npm run verify-scenario   # assertions across all 5 disruption kinds
 npm run dev
 ```
 
-Pages: **Scenario Studio** (build and run), **Ripple Map** (both views, synced
-selection, sub-step player), **Mitigation** (plan, before/after, AI),
-**Optimization Map** (the recovery played beat by beat), and the **Guided Demo**,
-which walks the hurricane end to end in seven annotated steps.
+`npm run refresh` does the export as part of the full refresh cycle.
 
-The Guided Demo embeds the real components with numbered pins on the click targets,
-a per-step action list, the one number each step should leave behind, and a button
-that navigates to the live page. It uses live components rather than screenshots
-because every figure changes when the network is re-exported — a capture would be
-wrong within a release and nobody would notice.
+Pages: **Scenario Studio** (build and run), **Ripple Map** (both views, synced
+selection, sub-step player), **Mitigation & Recovery** (the recovery played beat
+by beat, then the plan, before/after and the AI), and the **Guided Demo**, which
+walks the hurricane end to end in seven annotated steps.
+
+The Guided Demo embeds the real components with numbered pins on the click
+targets. It uses live components rather than screenshots because every figure
+changes when the network is re-exported.
 
 The engine runs in-process — 19 nodes and 27 flows simulate in microseconds, so
-the UI re-runs on every slider movement. A warehouse round-trip per keystroke
-would add latency for nothing.
+the UI re-runs on every slider movement.
 
 Only the AI needs credentials. Everything else works from the committed JSON.
 
@@ -369,13 +367,17 @@ Only the AI needs credentials. Everything else works from the committed JSON.
 
 ## Snowflake objects
 
+The representations the network walk reads:
+
 ```
-SAP_SUPPLY_CHAIN.SCENARIO          (views only, no copies)
-  V_NODE              19    V_PLANT_CAPACITY     5
-  V_FLOW              27    V_PLANT_INVENTORY    5
-  V_SUBSTITUTION      11
+SAP_SUPPLY_CHAIN.ONTOLOGY
+  VW_ONT_SUPPLIER   VW_ONT_PLANT   VW_ONT_CUSTOMER
+  VW_ONT_INBOUNDFLOW   VW_ONT_OUTBOUNDFLOW   VW_ONT_INTERPLANTFLOW
+  V_PRODUCES
+SAP_SUPPLY_CHAIN.ANALYTICS
+  DT_ORDER_FULFILLMENT
 ```
 
-`V_PLANT_CAPACITY.HRS_PER_UNIT` is **derived** — used hours divided by units
-shipped, blended across work centers and products. Planning-grade, and the UI
-says so rather than presenting unit counts as exact.
+`hrs_per_unit` is **derived** — used hours divided by units shipped, blended
+across work centers and products. Planning-grade, and the UI says so rather than
+presenting unit counts as exact.

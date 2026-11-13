@@ -8,8 +8,10 @@ customer:
     03_SE_Quick_Start.docx    positioning, a ten-minute path, objections
     06_Setup_and_Access.docx  live URL, local run, Snowflake objects
 
-Figures come from data/ in this repo, which is exported from the running
-application, so they cannot drift from what a demo actually shows.
+Figures come from tools/facts.py (the exported ontology, network, thread and
+baked scenarios), so they cannot drift from what a demo actually shows. The kit
+also refreshes its copies of the management summary, demo scripts, handbook,
+demo deck and project guide from their generated originals.
 
     python3 tools/build_presales_kit.py
 """
@@ -22,6 +24,8 @@ from pathlib import Path
 from docx import Document
 from docx.shared import Pt
 
+import facts
+from facts import money
 from docx_kit import (
     AMBER,
     GREEN,
@@ -62,13 +66,28 @@ def kit_video(src):
 
 PUBLIC_URL = "https://sfc-gh-dfreriks.github.io/supply-chain-ontology/"
 REPO_URL = "https://github.com/sfc-gh-dfreriks/supply-chain-ontology"
-DATE = "21 September 2026"
+DATE = __import__("datetime").date.today().strftime("%d %B %Y")
+
+
+SAP = Path.home() / "Documents" / "SAP"
+# kit file  <-  generated original
+COPIES = {
+    "01_Management_Summary.docx": SAP / "Supply_Chain_Ontology_Management_Summary.docx",
+    "02_Demo_Scripts_by_Persona.docx": SAP / "Supply_Chain_Ontology_Demo_Scripts.docx",
+    "05_Technical_Handbook.docx": SAP / "Supply_Chain_Ontology_Docs" / "Supply_Chain_Ontology_Documentation_Handbook.docx",
+    "SAP_Supply_Chain_Ontology_Demo.pptx": SAP / "SAP_Supply_Chain_Ontology_Demo.pptx",
+    "SAP_Supply_Chain_Ontology_Project_Guide.docx": SAP / "SAP_Supply_Chain_Ontology_Project_Guide.docx",
+}
 
 
 def load_data():
-    schema = json.loads((REPO / "data" / "sc_ontology_schema.json").read_text())
+    """facts, scenario list, network JSON."""
     network = json.loads((REPO / "data" / "sc_network.json").read_text())
-    return schema, network
+    return facts.build(), facts.scenarios(), network
+
+
+def scen(sc, id_):
+    return next(x for x in sc if x["id"] == id_)
 
 
 def title_block(doc, title, subtitle, strap):
@@ -95,7 +114,7 @@ def title_block(doc, title, subtitle, strap):
 # ---------------------------------------------------------------- START HERE
 
 
-def build_start_here(schema, network):
+def build_start_here(X, sc, network):
     doc = Document()
     setup_page(doc)
     title_block(
@@ -117,8 +136,9 @@ def build_start_here(schema, network):
         doc,
         "Live demo",
         f"{PUBLIC_URL} — credential-free, nothing to install. "
-        "Ask Cortex and shortest-path traversal are disabled in this build "
-        "because they need a Snowflake connection; see 06_Setup_and_Access.",
+        "Ask Cortex and the AI briefing are disabled in this build because they "
+        "need a Snowflake connection, and only the nine preset scenarios run; see "
+        "06_Setup_and_Access.",
     )
 
     h1(doc, "What this demonstrates")
@@ -126,12 +146,14 @@ def build_start_here(schema, network):
         doc,
         "When a plant goes offline, what is at risk downstream, and how much of it "
         "can be protected by moving work between plants we already own? The "
-        "application answers that in seconds against SAP data products already in "
-        "Snowflake. Nothing is copied out of SAP and no new platform is introduced — "
-        "which is the partnership proof point, not just the supply-chain one.",
+        "application answers that in seconds against SAP data already in Snowflake, "
+        "and it is built on Snowflake Business Ontology: every input is found by "
+        "walking a governed Supply Chain domain, so no table is named in code. "
+        "Nothing is copied and no new platform is introduced.",
     )
 
     t = network["totals"]
+    hur = scen(sc, "hurricane-austin")
     table(
         doc,
         ["The demo in six numbers", "Value"],
@@ -139,8 +161,8 @@ def build_start_here(schema, network):
             ["Network modelled", f"{t['plants']} plants, {t['suppliers']} suppliers, {t['customers']} customers"],
             ["Monthly network value", f"${t['monthly_value'] / 1_000_000:,.2f}M across {t['flows']} flows"],
             ["Flagship scenario", "Hurricane closes Austin Fab, 60 days"],
-            ["Exposure it finds", "$16.05M — 28.3% of monthly network value, across 2 hops"],
-            ["Protected by rerouting", "91.4% ($13.80M), inside real plant capacity"],
+            ["Exposure it finds", f"{money(hur['valueAtRisk'])} — {hur['pctOfNetwork']}% of monthly network value, across {hur['maxHop']} hops"],
+            ["Protected by rerouting", f"{hur['protectedPct']}% ({money(hur['protected'])}), inside real plant capacity"],
             ["Structural exposure", f"{len(t['single_source_categories'])} categories made at exactly one plant"],
         ],
         widths=[2.3, 4.4],
@@ -173,12 +195,14 @@ def build_start_here(schema, network):
             [
                 VIDEO_NAME,
                 "You want to see it run before you run it, or you need an async "
-                "asset for a customer who could not attend. Narrated.",
-                "4m43s",
+                "asset for a customer who could not attend. Narrated. Recorded "
+                "before the 13 Nov 2026 rebuild, so it shows the earlier page "
+                "layout; the scenario figures are unchanged.",
+                "4m11s",
             ],
             [
                 "00_Presales_Overview.pptx",
-                "You need slides. Ten slides covering the problem, the architecture, "
+                "You need slides. Ten slides covering the problem, the ontology, "
                 "the scenario result and the ask. Drop into your own deck.",
                 "10 slides",
             ],
@@ -190,14 +214,16 @@ def build_start_here(schema, network):
             ],
             [
                 "06_Setup_and_Access.docx",
-                "You need the full version — Ask Cortex, the scenario pages "
-                "against live Snowflake — or you want the Snowflake object inventory.",
+                "You need the full version — Ask Cortex, the AI briefing, any custom "
+                "disruption — or you want the Business Ontology and Snowflake object "
+                "inventory.",
                 "5 min",
             ],
             [
                 "07_Background/",
                 "Provenance. The AI309 Summit deck this narrative came from, and the "
-                "ontology-layer deep dive behind the abstract-class argument.",
+                "earlier ontology-layer deep dive (history: the app now runs on "
+                "Snowflake Business Ontology).",
                 "optional",
             ],
         ],
@@ -208,8 +234,9 @@ def build_start_here(schema, network):
     body(
         doc,
         "Be precise about what is real. The network, the flow volumes and values, "
-        "plant capacity and inventory buffer days are real SAP data products in "
-        "Snowflake. Two things are derived: which plant can substitute for another "
+        "plant capacity and inventory buffer days are real SAP data in Snowflake, "
+        "read through the ontology. Digital-thread instances are demo enrichment "
+        "keyed to it. Two things are derived: which plant can substitute for another "
         "(inferred from observed shipments, because production versions map each "
         "material to exactly one plant and so express no alternatives) and hours "
         "consumed per unit (blended across products, planning-grade). Qualification "
@@ -231,21 +258,23 @@ def build_start_here(schema, network):
     )
     bullet(
         doc,
-        "The SAP BDC catalog half is not an ontology. It is metadata about what data "
-        f"exists — {schema['counts']['classes']} classes and "
-        f"{schema['counts']['relations']} relations in Snowflake are the ontology. "
-        "The distinction is the architect's talk track; see 05_Technical_Handbook.",
+        "Not an app-owned data model. The ontology is the governed Supply Chain "
+        f"domain in Snowflake Business Ontology — {X['concepts']} concepts, "
+        f"{X['relationships']} relationships, {X['representations']} representations — "
+        "and the app only reads it. That is the architect's talk track; see "
+        "05_Technical_Handbook.",
     )
 
     h1(doc, "What the video covers")
     body(
         doc,
-        "The narrated walkthrough was re-recorded on 08 October 2026 in the author's "
-        "own voice (a Qwen3-TTS clone). It follows the hurricane scenario end to end — "
-        "Scenario Studio, Ripple Map, Mitigation, Optimization Map — and every figure "
-        "matches the live app. It does not show the newer Digital Thread page or the "
-        "Ask Cortex buttons; demo those live if the room is operations- or "
-        "quality-led.",
+        "The narrated walkthrough was recorded on 08 October 2026 in the author's "
+        "own voice (a Qwen3-TTS clone), before the 13 Nov 2026 rebuild on Business "
+        "Ontology, so it shows the earlier page layout: the recovery appears as a "
+        "separate page, which is now part of Mitigation & Recovery. "
+        "It follows the hurricane scenario end to end and its scenario figures still "
+        "match the live app. It does not show the Ontology page, the Digital Thread or "
+        "the Ask Cortex buttons; demo those live.",
     )
 
     h1(doc, "Support")
@@ -263,7 +292,8 @@ def build_start_here(schema, network):
 # --------------------------------------------------------------- QUICK START
 
 
-def build_quick_start(schema, network):
+def build_quick_start(X, sc, network):
+    hur = scen(sc, "hurricane-austin")
     doc = Document()
     setup_page(doc)
     title_block(
@@ -289,15 +319,15 @@ def build_quick_start(schema, network):
     )
     bullet(
         doc,
-        "This runs the second and third hop in seconds, against SAP data products "
-        "already in Snowflake, and returns a mitigation plan bounded by real plant "
+        "This runs the second and third hop in seconds, against SAP data already in "
+        "Snowflake, and returns a mitigation plan bounded by real plant "
         "capacity rather than a recovery percentage you have to take on faith.",
     )
     bullet(
         doc,
-        "Nothing leaves SAP and no new platform is bought — the SAP semantics are "
-        "preserved and the compute is Snowflake's. That is the partnership story in "
-        "one screen.",
+        "It is built on Snowflake Business Ontology: the relationships are governed "
+        "once in Snowflake and every page reads through them. Nothing is copied and "
+        "no new platform is bought.",
     )
 
     h1(doc, "Before you start")
@@ -321,8 +351,8 @@ def build_quick_start(schema, network):
     bullet(
         doc,
         "If you are pairing the video with a live demo: the video covers the hurricane "
-        "flow only. Digital Thread and the Ask Cortex buttons are live-only — show "
-        "them after the video rather than before.",
+        "flow only, in the earlier page layout. The Ontology page, Digital Thread and "
+        "the Ask Cortex buttons are live-only — show them after the video.",
     )
 
     h1(doc, "The ten-minute path")
@@ -330,7 +360,7 @@ def build_quick_start(schema, network):
         doc,
         "This is the Risk Manager flow, compressed. It is the strongest opening for "
         "almost any room: the scenario is one every manufacturer recognises, it "
-        "exercises all four scenario pages, and it ends on a decision with a number "
+        "exercises all three scenario pages, and it ends on a decision with a number "
         "attached.",
         italic=True,
     )
@@ -341,15 +371,16 @@ def build_quick_start(schema, network):
             [
                 "1",
                 "Scenario Studio",
-                "Open on the network — 5 plants, 6 suppliers, 8 customers, $56.69M a "
-                "month. Say: this is not a model we built, it is their SAP data "
-                "read in place.",
+                f"Open on the network — {X['plants']} plants, {X['suppliers']} suppliers, "
+                f"{X['customers']} customers, {money(X['monthly_value'])} a month. Say: "
+                "this is SAP data, found by walking the governed ontology.",
                 "1 min",
             ],
             [
                 "2",
                 "Scenario Studio",
-                "Run the Austin hurricane, 60 days. Exposure appears: $16.05M, 28.3% "
+                f"Run the Austin hurricane, 60 days. Exposure appears: "
+                f"{money(hur['valueAtRisk'])}, {hur['pctOfNetwork']}% "
                 "of monthly network value. Pause on the number before explaining it.",
                 "1 min",
             ],
@@ -370,23 +401,24 @@ def build_quick_start(schema, network):
             ],
             [
                 "5",
-                "Mitigation",
-                "Two feasible reroutes to San Jose, consuming 98 then 148 of 282 free "
+                "Mitigation & Recovery",
+                "Play the recovery. Two feasible reroutes to San Jose, consuming 98 then 148 of 282 free "
                 "hours. San Jose ends at 98.6% utilised with zero spare units — the "
                 "plan works and leaves no slack. That honesty is the credibility.",
                 "2 min",
             ],
             [
                 "6",
-                "Mitigation",
+                "Mitigation & Recovery",
                 "The blocked item: die sorting for two customers cannot be rerouted at "
-                "any price, because Penang is the only plant that makes it. $1.29M "
-                "unrecoverable. Close on 91.4% protected, 8.6% structural.",
+                "any price, because Penang is the only plant that makes it. "
+                f"{money(hur['unprotected'])} unrecoverable. Close on "
+                f"{hur['protectedPct']}% protected, {round(100 - hur['protectedPct'], 1)}% structural.",
                 "1 min",
             ],
             [
                 "7",
-                "Mitigation",
+                "Mitigation & Recovery",
                 "Generate the AI briefing, then ask a follow-up — what if the outage "
                 "runs 90 days. Shows the AI interpreting a computed result, not "
                 "inventing one. (Local build only.)",
@@ -395,7 +427,8 @@ def build_quick_start(schema, network):
             [
                 "8",
                 "Scenario Studio",
-                "If time allows, run Typhoon — Penang Assembly. $5.85M at risk, 0% "
+                "If time allows, run Typhoon — Penang Assembly. "
+                f"{money(scen(sc, 'typhoon-penang')['valueAtRisk'])} at risk, 0% "
                 "recoverable. Same tool, opposite answer: resilience is a property of "
                 "the network, not of a plant.",
                 "1 min",
@@ -408,8 +441,8 @@ def build_quick_start(schema, network):
     callout(
         doc,
         "Say this",
-        "Of $15.09M of customer revenue exposed by a hurricane at Austin, 91.4% can "
-        "be protected by moving work between plants we already own — and the "
+        f"Of {money(hur['revenueAtRisk'])} of customer revenue exposed by a hurricane "
+        f"at Austin, {hur['protectedPct']}% can be protected by moving work between plants we already own — and the "
         "remainder cannot be protected at any price, which is a sourcing decision, "
         "not a planning one.",
     )
@@ -417,20 +450,16 @@ def build_quick_start(schema, network):
     h1(doc, "The scenario library, for picking a second run")
     body(
         doc,
-        "Six scenarios ship ready to run. The spread is the point: pick a second one "
-        "that contradicts the first.",
+        f"{len(sc)} scenarios ship ready to run, three of them drawn from the "
+        "operations pulse. The spread is the point: pick a second one that "
+        "contradicts the first.",
     )
     table(
         doc,
         ["Scenario", "Duration", "At risk", "Hops", "Recoverable"],
-        [
-            ["Hurricane: Austin Fab offline", "60d", "$16.05M", "2", "91.4%"],
-            ["Typhoon: Penang Assembly offline", "30d", "$5.85M", "1", "0%"],
-            ["Supplier failure: Hamamatsu Photonics", "45d", "$9.08M", "3", "70.2%"],
-            ["Partial loss: Dresden Fab at 60%", "30d", "$4.12M", "1", "44.7%"],
-            ["Lane closed: San Jose to Penang", "40d", "$3.73M", "2", "0%"],
-            ["Demand spike: TSMC +60%", "30d", "$8.82M", "1", "—"],
-        ],
+        [[x["label"].replace(" — ", ": "), f"{x['days']}d", money(x["valueAtRisk"]),
+          str(x["maxHop"]), "—" if x["kind"] == "demand" else f"{x['protectedPct']}%"]
+         for x in sc],
         widths=[2.7, 0.8, 0.9, 0.5, 1.1],
     )
     body(
@@ -462,13 +491,13 @@ def build_quick_start(schema, network):
             [
                 "CFO / FP&A",
                 "What revenue is exposed, and how much of it is defensible?",
-                "Mitigation split",
+                "Mitigation & Recovery",
                 "High",
             ],
             [
                 "Plant Manager",
                 "What am I being asked to absorb, and can I take it?",
-                "Mitigation, capacity view",
+                "Mitigation & Recovery, capacity",
                 "Medium",
             ],
             [
@@ -485,8 +514,8 @@ def build_quick_start(schema, network):
             ],
             [
                 "Enterprise / Data Architect",
-                "How does this work without copying SAP data?",
-                "Ontology Model",
+                "How is this built on governed semantics?",
+                "Ontology",
                 "Medium",
             ],
         ],
@@ -516,7 +545,7 @@ def build_quick_start(schema, network):
             [
                 "Is this real data or a demo dataset?",
                 "The network, volumes, values, plant capacity and inventory are real "
-                "SAP data products in Snowflake. Two things are derived and labelled "
+                "SAP data in Snowflake. Two things are derived and labelled "
                 "as such on screen: substitutability, inferred from observed "
                 "shipments, and hours per unit, blended across products.",
             ],
@@ -546,10 +575,10 @@ def build_quick_start(schema, network):
             ],
             [
                 "Why not do this in SAP?",
-                "The reasoning spans plants, parties and flows as kinds of thing, "
-                "which is what the abstract classes give you — one query answers "
-                "'which parties are affected' across suppliers and customers. The SAP "
-                "semantics are preserved; Snowflake does the traversal and the AI.",
+                "The relationships it reasons over — supplies, ships to, has part, "
+                "fulfilled by — are governed once in Snowflake Business Ontology and "
+                "reused by every page, alongside data from outside SAP. Snowflake "
+                "does the walk and the AI.",
             ],
             [
                 "Can we point it at our network?",
@@ -566,7 +595,8 @@ def build_quick_start(schema, network):
         doc,
         ["Element", "Status"],
         [
-            ["Network, flows, volumes, values", "Real — SAP data products in Snowflake"],
+            ["Network, flows, volumes, values", "Real — SAP data in Snowflake, read through the ontology"],
+            ["Digital-thread instances", "Demo enrichment keyed to real plants, suppliers and BOMs"],
             ["Plant capacity and utilisation", "Real — work-centre capacity data"],
             ["Inventory buffer days", "Real — material stock data"],
             ["Which plant can substitute", "Derived from observed shipments"],
@@ -578,11 +608,10 @@ def build_quick_start(schema, network):
     )
 
     h1(doc, "If it goes wrong")
-    bullet(doc, "Ask returns nothing or errors — you are on the public build. It needs Snowflake credentials; skip step 7.")
-    bullet(doc, "Shortest path is missing — also public-build only. Expansion from the 24 most-connected entities is available.")
+    bullet(doc, "Ask Cortex or the AI briefing returns nothing — you are on the public build. It needs Snowflake credentials; skip step 7.")
+    bullet(doc, "A slider does nothing — also public-build only. Custom disruptions need the live server; use a preset.")
     bullet(doc, "The topology panel is zoomed awkwardly — press Reset view. A deliberate zoom is preserved across beats by design.")
     bullet(doc, "Playback is too slow or too fast for the room — speed is adjustable from 1.5 to 20 seconds per step.")
-    bullet(doc, "Graph traversal looks thinner than expected — say so. No entity association crosses a data product boundary; cross-product linkage lives in the ODM overlay, through Plant. The page states this on screen rather than implying a richer graph.")
 
     out = KIT / "03_SE_Quick_Start.docx"
     doc.save(out)
@@ -592,7 +621,7 @@ def build_quick_start(schema, network):
 # ------------------------------------------------------------- SETUP, ACCESS
 
 
-def build_setup(schema, network):
+def build_setup(X, sc, network):
     doc = Document()
     setup_page(doc)
     title_block(
@@ -609,15 +638,15 @@ def build_setup(schema, network):
         [
             [
                 "Public web build",
-                "Every page except Ask Cortex and shortest-path traversal. "
-                "Scenario pages, Ripple Map, Mitigation, Optimization Map all work "
-                "from pre-baked snapshots. No credentials, no customer data.",
+                "All seven pages and the nine preset scenarios from pre-baked "
+                "snapshots. No Ask Cortex, AI briefing or custom disruptions. No "
+                "credentials, no customer data.",
                 "Nothing — open the URL",
             ],
             [
                 "Local build",
-                "Everything, including Cortex Analyst and the AI briefing, against "
-                "live Snowflake.",
+                "Everything, including Ask Cortex, the AI briefing and custom "
+                "disruptions (AI_COMPLETE needs Snowflake).",
                 "Node, a clone, and key-pair credentials",
             ],
             [
@@ -632,7 +661,7 @@ def build_setup(schema, network):
     callout(doc, "Source and docs", REPO_URL)
 
     h1(doc, "Running it locally")
-    body(doc, "Node 18 or later, and a Snowflake key-pair user with read access to the objects listed below.")
+    body(doc, "Node 20 or later. Every page runs from the committed JSON; the AI features need a Snowflake key-pair user.")
     table(
         doc,
         ["Step", "Command"],
@@ -644,12 +673,11 @@ def build_setup(schema, network):
         ],
         widths=[0.9, 5.8],
     )
-    body(doc, "Cortex Analyst needs server/.env:", after=2)
+    body(doc, "Ask Cortex and the AI briefing need server/.env:", after=2)
     for line in [
         "SNOWFLAKE_ACCOUNT=…",
         "SNOWFLAKE_USER=…",
         "SNOWFLAKE_PRIVATE_KEY_PATH=…",
-        "BDC_SEMANTIC_VIEW=SAP_BDC_ONTOLOGY.SUPPLY_CHAIN.SUPPLY_CHAIN_ONTOLOGY_MODEL",
         "PORT=3009",
     ]:
         p = doc.add_paragraph()
@@ -660,12 +688,8 @@ def build_setup(schema, network):
     doc.add_paragraph()
 
     h1(doc, "What the public build cannot do")
-    bullet(doc, "Ask Cortex is disabled — Cortex Analyst needs Snowflake credentials.")
-    bullet(
-        doc,
-        "Shortest path is hidden. The pair space is quadratic, so only expansion "
-        "from the 24 most-connected entities is baked.",
-    )
+    bullet(doc, "Ask Cortex and the AI briefing are disabled — AI_COMPLETE needs Snowflake credentials.")
+    bullet(doc, "Custom disruptions are disabled — simulate runs server-side, so only the nine presets are baked.")
     body(
         doc,
         "Both are stated on screen in the public build, so you will not be caught "
@@ -673,53 +697,34 @@ def build_setup(schema, network):
         italic=True,
     )
 
-    h1(doc, "Snowflake objects")
+    h1(doc, "The ontology — Snowflake Business Ontology")
+    rt = X["rel_types"]
     body(
         doc,
-        "Two schemas, matching the two halves of the application. The ontology is "
-        "the model; the catalog is metadata about what data exists.",
+        f"Domain '{X['domain']}' on account {X['account']}: {X['concepts']} concepts "
+        f"({X['entities']} entities, {X['terms']} term), {X['relationships']} relationships "
+        f"({', '.join(f'{v} {k}' for k, v in rt.items())}), {X['representations']} "
+        "representations. Open it in Snowsight under Data → Business Ontology.",
     )
-
-    h2(doc, "The ontology — SAP_SUPPLY_CHAIN.ONTOLOGY")
+    lin = network["lineage"]
     table(
         doc,
-        ["Layer", "Name", "Contents"],
-        [[s["layer"], s["name"], f"{s['detail']} — {s['note']}"] for s in schema["stack"]],
-        widths=[0.6, 1.4, 4.7],
-    )
-    c = schema["counts"]
-    body(
-        doc,
-        f"{c['classes']} classes ({c['abstract']} abstract, {c['concrete']} concrete), "
-        f"{c['relations']} relations ({c['relations_stored']} stored, "
-        f"{c['relations_inferred']} inferred, {c['relations_abstract']} abstract), "
-        f"{c['instances']:,} instances. The abstract layer is what lets one query span "
-        "several concrete types — asking for parties returns all 8 customers and 6 "
-        "suppliers together.",
-    )
-
-    h2(doc, "The BDC catalog — SAP_BDC_ONTOLOGY.SUPPLY_CHAIN")
-    body(
-        doc,
-        "Views over the parent ontology's CORE tables. No copies are made, so there "
-        "is one source of truth.",
-    )
-    table(
-        doc,
-        ["Object", "Rows"],
+        ["App input", "Found by walking", "Representation read"],
         [
-            ["V_PRODUCT", "36 data products"],
-            ["V_ENTITY", "338 CDS entities"],
-            ["V_ENTITY_EDGE", "281 associations"],
-            ["V_PROCESS", "3 processes"],
-            ["V_ODM_EDGE", "19 master-data links"],
-            ["V_PROCESS_ROLLUP", "derived"],
-            ["SUPPLY_CHAIN_ONTOLOGY_MODEL", "semantic view — 17 facts, 11 metrics"],
+            ["Suppliers, plants, customers", lin["walk"]["network"],
+             ", ".join(v.split(".")[-1] for v in lin["nodes"].values())],
+            ["Material flows", lin["walk"]["flows"],
+             ", ".join(v.split(".")[-1] for v in lin["flows"].values())],
+            ["Capacity, inventory", "Plant", "VW_ONT_PLANT"],
+            ["Substitution", "Plant produces Material Category", "V_PRODUCES"],
+            ["Order economics", lin["walk"]["economics"], "ANALYTICS.DT_ORDER_FULFILLMENT"],
+            ["Digital thread", "System Serial has part Component Lot", "VW_ONT_LOT_BLAST_RADIUS + concept views"],
+            ["Operations pulse", "Plant, Equipment", "DT_OPERATING_RATE, DT_COMPONENT_COVER, DT_EQUIPMENT_HEALTH"],
         ],
-        widths=[3.2, 3.5],
+        widths=[1.6, 2.4, 2.7],
     )
 
-    h2(doc, "The scenario network — SAP_SUPPLY_CHAIN.SCENARIO")
+    h2(doc, "The network it produces")
     t = network["totals"]
     table(
         doc,
@@ -728,25 +733,17 @@ def build_setup(schema, network):
             ["Nodes", f"{t['nodes']} — {t['plants']} plants, {t['suppliers']} suppliers, {t['customers']} customers"],
             ["Flows", f"{t['flows']} carrying ${t['monthly_value'] / 1_000_000:,.2f}M monthly"],
             ["Single-source categories", ", ".join(t["single_source_categories"])],
+            ["Digital thread", f"{X['systems']} systems, {X['lots']} lots ({X['deviating_lots']} deviating), {X['tools']} tools"],
         ],
         widths=[1.7, 5.0],
     )
 
-    h1(doc, "Scope rule, if asked what is in and out")
+    h1(doc, "Refreshing")
     body(
         doc,
-        "A data product is in scope when either its business process is Design to "
-        "Operate, or its line of business names Supply Chain, Manufacturing, Sourcing "
-        "and Procurement, or R&D Engineering. Line of business is a delimited "
-        "multi-value string, so it is matched per token — matching the whole string "
-        "would drop every product carrying Supply Chain alongside another LOB, which "
-        "is most of the interesting cross-functional ones.",
-    )
-    body(
-        doc,
-        "The rule is implemented twice, and a deploy step asserts the two agree and "
-        "fails if they drift — otherwise Ask would answer over a different "
-        "population than the pages display.",
+        "After a steward changes the domain: npm run refresh. It re-walks the ontology, "
+        "re-exports, re-bakes the public snapshots and reconciles — failing if the "
+        "served files no longer match the ontology.",
     )
 
     h1(doc, "Related assets")
@@ -755,7 +752,7 @@ def build_setup(schema, network):
         ["Asset", "Where"],
         [
             ["SAP Supply Chain 360", "Production supply-chain analytics — separate app, separate listing"],
-            ["SAP BDC Ontology Explorer", "https://sfc-gh-dfreriks.github.io/sap-bdc-data-products/ — all 334 products"],
+            ["SAP BDC data products explorer", "https://sfc-gh-dfreriks.github.io/sap-bdc-data-products/ — the catalog this domain was derived from"],
             ["This kit", "SAP Partnership Compass, Seismic"],
         ],
         widths=[1.9, 4.8],
@@ -778,10 +775,16 @@ def main():
     global VIDEO_NAME
     VIDEO_NAME = kit_video(VIDEO_SRC)
     KIT.mkdir(parents=True, exist_ok=True)
-    schema, network = load_data()
+    X, sc, network = load_data()
     for fn in (build_start_here, build_quick_start, build_setup):
-        path = fn(schema, network)
+        path = fn(X, sc, network)
         print(f"wrote {path}")
+    for name, src in COPIES.items():
+        if src.exists():
+            shutil.copy2(src, KIT / name)
+            print(f"copied {name}")
+        else:
+            print(f"MISSING original for {name}: {src}")
 
 
 if __name__ == "__main__":

@@ -1,246 +1,78 @@
 # 3. Build steps
 
-The sequence actually followed, in order, with what each step verified. Anyone
-reproducing this should get the same numbers at the same checkpoints.
+The sequence that produces the current app, in order, with what each step
+verified. Anyone reproducing it should get the same numbers at the same
+checkpoints.
 
-Prerequisites: Node 20+, Python 3.10+, a Snowflake account with the parent
-`SAP_BDC_ONTOLOGY.CORE` tables already deployed, and the
-[parent explorer](06-references.md#parent-project) checked out as a sibling so
-its `ontology_builder` can be imported.
-
----
-
-## Step 0 — Decide what "ontology" means here
-
-Four foundations were available, and they model different things. The choice
-determines everything downstream:
-
-| Option | Models | Cost |
-|---|---|---|
-BDC catalog slice | metadata about data products | reuses deployed tables |
-KG agent stack | supply-chain objects (suppliers, shipments, risk) | full SQL deploy |
-Both as two lenses | both | roughly double |
-Existing SC 360 semantic view | real SAP transactional data | already deployed |
-
-**Chosen: the BDC catalog slice.** It reuses the parent's `CORE` tables, so no
-new base data is deployed, and the ontology is genuinely about how SAP publishes
-supply chain rather than about one synthetic dataset.
-
-Worth being explicit that this is a *metadata* ontology — it is the single most
-common misunderstanding about the result. See
-[concepts](01-concepts.md#what-this-is-not).
+Prerequisites: Node 20+, Python 3.10+, and read access to the Snowflake Business
+Ontology domain **Supply Chain** and the `SAP_SUPPLY_CHAIN` objects its
+representations point at (`server/.env`, see [execution](04-execution.md)).
 
 ---
 
-## Step 1 — Scaffold from the parent explorer
+## Step 1 — Govern the domain
+
+The Supply Chain domain holds 21 concepts (20 entities, 1 term), 26
+relationships (13 IS_A, 9 CUSTOM, 3 HAS_PART, 1 CLASSIFIES) and 25
+representations. Seven representations were added for the app — Material
+Category, Sales Order, Component Lot, two on Plant, two on Equipment — each
+through the quality gate with 0 findings.
+
+**Verify:** the Ontology page and Snowsight show the same counts.
+
+---
+
+## Step 2 — Export by walking the domain
 
 ```bash
-rsync -a --exclude node_modules --exclude 'data/*.json' \
-      --exclude .git --exclude cortex_project \
-      sap_bdc_ontology_react/ supply_chain_ontology_react/
+python3 tools/export_business_ontology.py   # data/sc_business_ontology.json
+python3 tools/export_ontology_network.py    # data/sc_network.json   19 nodes, 27 flows
+python3 tools/export_ops_thread.py          # data/sc_ops_thread.json 419 systems, 107 lots
 ```
 
-Then retarget: data path → `sc_ontology.json`, server port → 3009, client port
-→ 5179, proxy target, workspace names, page title, sidebar branding.
+Each exporter finds its inputs by relationship and reads the representation of
+the concept it reached; the resolved objects are written to a `lineage` block.
 
-Three of the parent's tools came along and were deleted:
-`deploy_ontology_to_snowflake.py`, `export_ontology.py`, `export_explore.py`.
-The first writes to the parent's `CORE` tables — leaving it in a derived project
-invites someone to run it from the wrong directory.
-
-**Verify:** `npm run export-data` still succeeds after the deletions, proving
-nothing depended on them.
+**Verify — parity:** before the switch, all nine scenario presets produced
+identical totals, flows and mitigation plans to the previous table-driven
+export, and the thread matched on serials, traces, lots, equipment and the
+operations pulse.
 
 ---
 
-## Step 2 — Build the filtered ontology
+## Step 3 — The scenario engine
 
 ```bash
-npm run export-data      # tools/export_sc_ontology.py
-```
-
-Expected:
-
-```
-products      36  (of 334)
-entities     338  (of 2243)
-edges        281  (of 2376)
-odm edges     19   pairs 19
-scorecard overall: 96
-
-by process:
-   Design to Operate      27 products   267 entities
-   Source to Pay           7 products    51 entities
-   Lead to Cash            2 products    20 entities
-```
-
-27 + 7 + 2 = 36 and 267 + 51 + 20 = 338. If those do not add up, the filter and
-the rollup disagree.
-
-**The trap:** the exporter must emit `correlation`, `scorecard` and
-`insight_apps`, because three pages read them. The first version omitted all
-three. Compare the exported keys against the `Ontology` interface in
-`server/src/services/ontology.ts` rather than assuming.
-
----
-
-## Step 3 — Deploy the Snowflake views
-
-```bash
-npm run deploy-views     # tools/deploy_sc_views.py
-```
-
-This creates six views and then asserts parity against the JSON. All five checks
-must read `OK`; the script exits non-zero otherwise.
-
-`V_PRODUCT` projects explicit columns and renames three of them
-(`PRODUCT_ENTITY_COUNT`, `PRODUCT_ASSOCIATION_COUNT`, `PRODUCT_CROSS_ASSOC`).
-Do this **before** generating the semantic view — retrofitting it means
-regenerating the model.
-
----
-
-## Step 4 — Generate the semantic view
-
-Use the `cortex agent-studio` CLI. Do not hand-edit `.sv.yaml`.
-
-```bash
-cortex agent-studio sv-generate --file-path proto.json --out-path response.json
-cortex agent-studio sv-write --yaml-content "$(cat model.sv.yaml)" \
-  --source-object SAP_BDC_ONTOLOGY.SUPPLY_CHAIN.SUPPLY_CHAIN_ONTOLOGY_MODEL
-cortex agent-studio sv-edit --file-path SUPPLY_CHAIN_ONTOLOGY_MODEL.sv.yaml \
-  --operations '[{"operation":"add_metric","params":{…}}]'
-cortex agent-studio sv-deploy --file-path cortex_project/SUPPLY_CHAIN_ONTOLOGY_MODEL.sv.yaml \
-  --fqn SAP_BDC_ONTOLOGY.SUPPLY_CHAIN.SUPPLY_CHAIN_ONTOLOGY_MODEL
-```
-
-The proto declares tables, columns, a `semanticDescription`, and nine
-representative queries with their questions — those become verified queries.
-
-**Add metrics. Leave numerics as dimensions.** The instinct to promote every
-numeric column to a fact is wrong here and produces a model that validates,
-deploys, and then fails every query. The full explanation is in
-[findings](05-findings.md#the-semantic-view-trap); it cost three rebuilds.
-
-Two things the description must state:
-
-- this is metadata, not transactional data
-- `V_ENTITY.PROCESS_CODE` must not join to `V_PROCESS`
-
-**Verify against ground truth**, not just that it deploys:
-
-```sql
-SELECT * FROM SEMANTIC_VIEW(
-  SAP_BDC_ONTOLOGY.SUPPLY_CHAIN.SUPPLY_CHAIN_ONTOLOGY_MODEL
-  DIMENSIONS V_PROCESS.PROCESS_NAME
-  METRICS V_PRODUCT.SC_TOTAL_DATA_PRODUCTS, V_PRODUCT.SC_TOTAL_PRODUCT_ENTITIES
-) ORDER BY SC_TOTAL_DATA_PRODUCTS DESC;
-```
-
-Must return 27/267, 7/51, 2/20 — matching step 2 exactly.
-
----
-
-## Step 5 — Graph traversal
-
-`server/src/services/traverse.ts` adds undirected adjacency, BFS expansion,
-shortest path, and a `topology()` report. Routes: `/api/hubs`,
-`/api/traverse`, `/api/path`, `/api/entities`, `/api/topology`.
-
-Design points worth keeping:
-
-- **Associations are undirected.** A BOM item pointing at a material and a
-  material pointed at by a BOM item are the same neighbourhood.
-- **Seed defaults to the highest-degree entity.** An arbitrary pick in a
-  338-node graph usually lands on a leaf with one edge.
-- **`limit` caps nodes and BFS order is preserved**, so truncation removes the
-  outer ring rather than an arbitrary slice.
-- **`crossProduct` is derived from the endpoints' products**, not read from
-  `EntityEdge.cross_product` — that flag exists but is never set true, so
-  trusting it paints every edge as internal.
-
-Investigating that flag produced the most useful finding in the project. See
-[findings](05-findings.md#the-graph-is-not-what-it-looks-like).
-
----
-
-## Step 6 — Guided demo
-
-`client/src/pages/Demo.tsx` — five steps adapted from the AI309 Summit deck
-("Enterprise Supply Chain Ontology Agent"): the problem, the catalog, the
-ontology, traversal, the agent.
-
-The deck's argument is kept. The **figures are read live** from `/api/demo`
-rather than transcribed from the slides, so the walkthrough cannot quote numbers
-that have drifted from the ontology being served.
-
----
-
-## Step 7 — Public static build
-
-```bash
-npm run dev            # in one shell — the baker reads the live API
-npm run bake           # 93 snapshots → client/public/data/
-npm run build:static
-npm run preview:static # http://localhost:8899
-```
-
-`VITE_STATIC=1` switches `api.ts` from `/api` to pre-baked JSON. Ask and
-shortest path are disabled with on-screen explanations rather than left to fail.
-
-**The filename trap:** the baker first used `urllib.parse.urlencode`, so entity
-IDs containing `::` produced filenames with `%3A%3A`. The web server decodes
-`%3A` back to `:` on the way in, so every traversal snapshot 404'd. Both sides
-now fold unsafe characters to `-` using the identical rule.
-
-**Verify:** fetch a traversal snapshot through the HTTP server, not off disk —
-that is the only way to catch this class of bug.
-
----
-
-## Step 8 — Verify end to end
-
-| Check | Expected |
-|---|---|
-Endpoints | 18/18 respond without error |
-Ask | 10/10 example questions return rows |
-Answer correctness | semantic roles sum to 338; processes sum to 36 |
-Parity | Snowflake and JSON agree on all five counts |
-Builds | both workspaces compile clean |
-Static | 93 snapshots served over HTTP |
-
-Endpoints responding is not the same as answers being right. Both were checked
-separately, and the Ask check is what exposed the fact bug — the model had
-already validated and deployed clean.
-
----
-
-## Step 9 — the scenario layer
-
-The steps above build the ontology explorer. Disruption scenario modelling was
-added afterwards, on a **different data foundation**, and has its own build
-sequence:
-
-```bash
-npm run deploy-scenario   # SAP_SUPPLY_CHAIN.SCENARIO — 5 views
-npm run export-network    # data/sc_network.json — 19 nodes, 27 flows
 npm run build-land        # client/public/land.geo.json — once only
-npm run verify-scenario   # 20 assertions across all five disruption kinds
+npm run verify-scenario   # assertions across all five disruption kinds
 ```
 
-Full detail, including the propagation model, the optimizer and the visualization
-choices, is in [scenario modelling](07-scenario-modelling.md).
+Propagation, the optimizer and the visualization choices are in
+[scenario modelling](07-scenario-modelling.md). Run `verify-scenario` before
+trusting any figure: it caught a unit-rate mismatch and a lane closure that
+silently reported zero exposure, and both looked plausible on screen.
 
-Two things to know before starting it:
+---
 
-- The BDC catalog ontology **cannot** model ripple effects — it is metadata about
-  data products, with no plants, flows or inventory. Attempting it there is the
-  first wrong turn available.
-- Run `verify-scenario` before trusting any figure. It caught a unit-rate mismatch
-  and a lane closure that silently reported zero exposure, and both looked entirely
-  plausible on screen.
+## Step 4 — Bake and reconcile
 
-## Step 9 — narrated beats on both maps
+```bash
+npm run refresh           # exports, server build, bake, reconcile
+npm run build:static
+npm run preview:static    # http://localhost:8899
+```
+
+`VITE_STATIC=1` switches `api.ts` from `/api` to pre-baked JSON. The AI features
+are disabled with on-screen explanations rather than left to fail.
+
+**The filename trap:** IDs containing `::` once produced filenames with `%3A%3A`,
+which the web server decodes back to `:` and never finds. Both sides now fold
+unsafe characters to `-` using the identical rule. **Verify** over HTTP, not off
+disk.
+
+---
+
+## Step 5 — Narrated beats on both maps
 
 Add the shared step furniture and the recovery player.
 
@@ -249,14 +81,14 @@ client/src/lib/substeps.ts        enrich beats: subtitle, why, kpis[], detail[]
 client/src/lib/mitsteps.ts        NEW  one beat per reroute / blocked / summary
 client/src/lib/pace.ts            NEW  persisted seconds-per-step, 1.45x on heavy beats
 client/src/components/StepCards.tsx  NEW  SubtitleBand, KpiCards, ExplainStep, PaceControl
-client/src/pages/OptimizeMap.tsx  NEW  the recovery, beat by beat
+client/src/pages/OptimizeMap.tsx  NEW  the recovery, beat by beat (now embedded in Mitigation & Recovery)
 client/src/pages/RippleMap.tsx    wire subtitle + cards + explain; controls moved below the map
 client/src/index.css              kpi-in and lane-draw keyframes
 client/src/App.tsx                route + title for `optimize`
 client/src/components/Sidebar.tsx nav entry; PageId gains "optimize"
 ```
 
-No server or SQL change is needed — the Optimization Map reads the `plan` already
+No server or SQL change is needed — the recovery movie reads the `plan` already
 returned by `POST /api/scenario/simulate`, so the baked static snapshots continue to
 work unchanged.
 
@@ -267,3 +99,13 @@ Verify the narrative against the optimizer rather than by eye:
 # and residual must equal valueUnprotected
 node --input-type=module -e "..."   # see docs/05-findings.md
 ```
+
+---
+
+## History — the catalog-explorer build (superseded 13 Nov 2026)
+
+The first build sliced the SAP BDC catalog into a metadata explorer with Snowflake
+views and a semantic view, then added an app-owned class model. Both were removed
+when the app moved onto Business Ontology; their exporters and pages no longer
+exist. The derivation of the domain from that work is recorded in
+[the ontology layer](08-ontology-layer.md).

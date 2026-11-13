@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the management summary Word document.
 
-Every figure is read from /tmp/scenario_facts.json and /tmp/network_facts.json,
+Every figure is read from tools/facts.py (exported ontology, network, baked scenarios),
 which are produced by querying the running application — nothing here is
 transcribed by hand, so the document cannot drift from what the app actually
 reports.
@@ -22,6 +22,7 @@ from docx_kit import (  # noqa: E402
     GREY, SAP_NAVY, SNOW_BLUE,
     body, bullet, h1, h2, money, setup_page, table,
 )
+import facts  # noqa: E402
 
 OUT = pathlib.Path.home() / "Documents" / "SAP" / "Supply_Chain_Ontology_Management_Summary.docx"
 
@@ -32,13 +33,11 @@ SITE = "https://sfc-gh-dfreriks.github.io/supply-chain-ontology/"
 # ------------------------------------------------------------------- the report
 
 def main():
-    try:
-        scen = json.loads(pathlib.Path("/tmp/scenario_facts.json").read_text())
-        net = json.loads(pathlib.Path("/tmp/network_facts.json").read_text())
-        # capacityAfter is per-plant end state, only carried in the persona facts
-        pf = json.loads(pathlib.Path("/tmp/persona_facts.json").read_text())
-    except FileNotFoundError as e:
-        sys.exit(f"missing input: {e}. Query the running app first.")
+    X = facts.build()
+    # the six core presets; the three ops-* presets come from the operations pulse
+    scen = [x for x in facts.scenarios() if not x["id"].startswith("ops-")]
+    pf = facts.persona_facts()
+    net = {"totals": pf["totals"]}
 
     doc = Document()
     setup_page(doc)
@@ -53,7 +52,7 @@ def main():
 
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(2)
-    r = p.add_run("Disruption scenario modelling on SAP Business Data Cloud and Snowflake")
+    r = p.add_run("Disruption scenario modelling on Snowflake Business Ontology")
     r.font.size = Pt(13)
     r.font.color.rgb = SNOW_BLUE
 
@@ -63,7 +62,6 @@ def main():
     r.font.size = Pt(9.5)
     r.font.color.rgb = GREY
 
-    total_products = 36
     nt = net["totals"]
     # the plant the hurricane plan leaves tightest — the "new weak point"
     sj = next((c for c in pf["hurricane"]["capacityAfter"]
@@ -88,11 +86,12 @@ def main():
          "If a site is disrupted, what is at risk downstream and how do we compensate?"],
         ["Status", "**Built, deployed and verified. Running today.**"],
         ["Data foundation",
-         f"SAP data products in Snowflake — {nt['nodes']} network nodes, {nt['flows']} flows, "
-         f"{money(nt['monthly_value'])} monthly"],
+         f"SAP data in Snowflake, read through a governed Business Ontology domain "
+         f"({X['concepts']} concepts, {X['relationships']} relationships) — {nt['nodes']} network "
+         f"nodes, {nt['flows']} flows, {money(nt['monthly_value'])} monthly"],
         ["Time to an answer",
          "Seconds per scenario, versus a manual exercise measured in days"],
-        ["New infrastructure required", "None. Views over existing Snowflake data."],
+        ["New infrastructure required", "None. One governed ontology domain over existing Snowflake data."],
         ["Cost to operate",
          "Negligible. Simulation runs in the application; only the AI narrative uses Snowflake compute."],
     ]
@@ -104,17 +103,22 @@ def main():
          "Three connected pieces of work, each independently usable.")
 
     rows = [
-        ["1. Ontology explorer",
-         f"A navigable model of the supply-chain slice of the SAP BDC catalog: "
-         f"{total_products} data products, 338 entities and 281 declared relationships. "
-         f"Answers what data exists and how it connects.",
-         "6 pages"],
+        ["1. Governed ontology",
+         f"The Supply Chain domain in Snowflake Business Ontology — {X['concepts']} concepts, "
+         f"{X['relationships']} relationships, {X['representations']} representations — with an "
+         f"executive dashboard and an Ontology page. Every page finds its data by walking it.",
+         "2 pages"],
         ["2. Scenario modelling",
          "Disruption simulation across five event types, with ripple visualisation on a world "
          "map and network graph side by side, a mitigation optimiser, an animated recovery that "
          "plays the plan one decision at a time, and an AI briefing.",
          "4 pages"],
-        ["3. Publication",
+        ["3. Digital thread",
+         f"Traceability from sales order to built system to component lot to tool: "
+         f"{X['systems']} systems, {X['lots']} lots, {X['deviating_lots']} with a deviation. "
+         f"Answers which customers a bad lot reached.",
+         "1 page"],
+        ["4. Publication",
          "Documented public repository and a credential-free web build, so the work can be "
          "shared with customers and colleagues without granting Snowflake access.",
          "7 documents"],
@@ -170,7 +174,7 @@ def main():
     # ---- the recovery player ---------------------------------------------
     h1(doc, "Seeing the plan, not just the number")
     body(doc,
-         "A recovery percentage is easy to state and hard to trust. The Optimization Map plays "
+         "A recovery percentage is easy to state and hard to trust. Mitigation & Recovery plays "
          "the plan out as a sequence, one decision per step, so the reasoning is visible rather "
          "than asserted.")
 
@@ -204,7 +208,7 @@ def main():
 
     h1(doc, "Scenario library")
     body(doc,
-         "Six scenarios ship ready to run. The spread matters: some disruptions are largely "
+         f"{len(scen)} core scenarios ship ready to run, plus three drawn from the operations pulse. The spread matters: some disruptions are largely "
          "recoverable and some are not recoverable at all, and knowing which is which in advance "
          "is the point of the exercise.")
 
@@ -254,7 +258,7 @@ def main():
         ["CFO / FP&A",
          "What revenue is exposed, and how much of it is defensible?",
          "Quantified value at risk, protected versus residual, watched accumulating decision by "
-         "decision on the Optimization Map — usable in risk "
+         "decision on Mitigation & Recovery — usable in risk "
          "disclosure and contingency planning.",
          "High"],
         ["Plant Manager",
@@ -268,8 +272,8 @@ def main():
          "Medium"],
         ["Enterprise / Data Architect",
          "How does this work without copying SAP data?",
-         "The ontology explorer and semantic layer demonstrate the zero-copy SAP BDC to "
-         "Snowflake pattern end to end.",
+         "The Ontology page shows every input read through governed concepts and their "
+         "representations — no table named in code, no data copied.",
          "Medium"],
     ]
     table(doc, ["Role", "Question they ask", "What they do with it", "Fit"],
@@ -300,7 +304,7 @@ def main():
          "1 min"],
         ["2", "Scenario Studio",
          "Run the Austin hurricane. Headline exposure appears: "
-         f"{money(16_051_035)}, {hur['pctOfNetwork']}% of the network.",
+         f"{money(hur['valueAtRisk'])}, {hur['pctOfNetwork']}% of the network.",
          "1 min"],
         ["3", "Ripple Map",
          "Press Play from the start. The cascade walks one lane at a time — 1a, 1b, 1c — "
@@ -312,15 +316,15 @@ def main():
          "Click Penang. The step panel already says it: 12 days of stock, so it fails on "
          "day 13, not day 1.",
          "1 min"],
-        ["5", "Mitigation",
+        ["5", "Mitigation & Recovery",
          "Show the two feasible reroutes, and that they consume San Jose's spare capacity "
          "exactly — the fix creates a new fragility.",
          "1 min"],
-        ["6", "Mitigation",
+        ["6", "Mitigation & Recovery",
          "Show the blocked item: die sorting cannot be rerouted at any price, because Penang "
          "is the only source.",
          "1 min"],
-        ["7", "Mitigation",
+        ["7", "Mitigation & Recovery",
          "Generate the AI briefing, then ask a follow-up such as what if the outage ran twice "
          "as long. Emphasise that the AI interprets the numbers and does not invent them.",
          "1 min"],
@@ -348,8 +352,9 @@ def main():
     h1(doc, "How it works, briefly")
     rows = [
         ["Where the data lives",
-         "Snowflake, as views over existing SAP data products. No copies are made, so the "
-         "application and operational reporting cannot disagree."],
+         "Snowflake, read through the governed Supply Chain domain in Business Ontology: each "
+         "input is found by walking typed relationships and read from the representation "
+         "linked to that concept. No copies are made."],
         ["How impact spreads",
          "Impact travels along supply flows in proportion to how much a site depends on what it "
          "lost. Inventory absorbs the front of an event, which is why duration changes the "
@@ -372,7 +377,7 @@ def main():
          "Stating this plainly protects the credibility of the numbers when they are challenged.")
 
     rows = [
-        ["Network, flows, volumes, values", "**Real** — from SAP data products in Snowflake"],
+        ["Network, flows, volumes, values", "**Real** — SAP data in Snowflake, read through the ontology"],
         ["Plant capacity and utilisation", "**Real** — from work-centre capacity data"],
         ["Inventory buffer days", "**Real** — from material stock data"],
         ["Which plant can substitute for another",
@@ -408,8 +413,8 @@ def main():
     table(doc, ["Resource", "Location"], rows, [2.2, 4.7], size=9)
 
     body(doc,
-         "The public build carries no credentials and no customer data. The scenario pages need "
-         "a live Snowflake connection and therefore run locally or in a controlled environment.",
+         "The public build carries no credentials and no customer data. It runs every page and "
+         "the nine preset scenarios; custom disruptions and the AI need the live app.",
          size=9, italic=True, color=GREY)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

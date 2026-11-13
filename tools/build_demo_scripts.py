@@ -7,7 +7,7 @@ deliberately NOT one template with the role name swapped: each persona opens on 
 different page, drives different figures and closes on a different point, because
 that is the only way the demo lands as being about their job.
 
-Figures come from /tmp/persona_facts.json, queried from the running application.
+Figures come from tools/facts.py (the exported ontology, network and baked scenarios).
 
 Run:  python3 tools/build_demo_scripts.py
 """
@@ -24,6 +24,7 @@ from docx_kit import (  # noqa: E402
     AMBER, GREY, RED, SAP_NAVY, SNOW_BLUE, BLUE_HEX, LIGHT_HEX,
     body, bullet, callout, h1, h2, money, setup_page, table,
 )
+import facts  # noqa: E402
 
 OUT = pathlib.Path.home() / "Documents" / "SAP" / "Supply_Chain_Ontology_Demo_Scripts.docx"
 APP = "http://localhost:5179"
@@ -58,10 +59,8 @@ def qa(doc, pairs):
 
 
 def main():
-    try:
-        F = json.loads(pathlib.Path("/tmp/persona_facts.json").read_text())
-    except FileNotFoundError as e:
-        sys.exit(f"missing {e}. Query the running app first.")
+    F = facts.persona_facts()
+    X = facts.build()
 
     hur, pen = F["hurricane"], F["penang"]
     nt = F["totals"]
@@ -103,16 +102,14 @@ def main():
          "we can cost a disruption and its response before it happens", "9"],
         ["2", "VP Supply Chain / COO", "Scenario Studio → library",
          f"{sole_pct}% of flow has no alternative source at all", "6"],
-        ["3", "CFO / FP&A", "Mitigation",
+        ["3", "CFO / FP&A", "Mitigation & Recovery",
          "revenue exposure splits into defensible and undefendable", "5"],
-        ["4", "Plant Manager", "Mitigation",
+        ["4", "Plant Manager", "Mitigation & Recovery",
          "a reroute is a real load with a real limit", "5"],
         ["5", "Customer Account Director", "Ripple Map",
          "customers are hit who are nowhere near the event", "5"],
-        ["6", "Enterprise / Data Architect", "Ontology Model",
-         "the abstract layer answers questions the catalog cannot", "7"],
-        ["7", "Enterprise / Data Architect", "SAP BDC Catalog",
-         "none of this required moving SAP data", "5"],
+        ["6", "Enterprise / Data Architect", "Ontology",
+         "every input is read through the governed ontology, no table named in code", "7"],
     ], [0.3, 1.9, 1.35, 2.75, 0.55], size=9)
 
     h2(doc, "Before any demo")
@@ -132,7 +129,7 @@ def main():
         "Hurricane season starts in six weeks. What is our exposure, and what is the plan?")
 
     body(doc,
-         "This is the flagship script. It uses all four scenario pages and ends in a decision "
+         "This is the flagship script. It uses all three scenario pages and ends in a decision "
          "with a number attached. If you only ever learn one script, learn this one.")
 
     callout(doc, "Before you start:",
@@ -170,25 +167,25 @@ def main():
          "“Austin ships Penang its test fixtures. Penang holds 12 days of stock, so it runs "
          "fine until day 13 and then starves — and takes TSMC and Texas Instruments down "
          "with it. That is the effect no spreadsheet catches.”"],
-        ["6", "Mitigation", "Show the two reroutes.",
+        ["6", "Mitigation & Recovery", "Show the two reroutes.",
          f"“Two moves recover {money(hur['protected'])} — {hur['protectedPct']}% of the "
          f"exposure — using plants we already own.”"],
-        ["7", "Optimization Map", "Press **Play the recovery**. One decision per beat.",
+        ["7", "Mitigation & Recovery", "Press **Play the recovery**. One decision per beat.",
          "“Now watch the fix happen. Each step shows the lane that died struck through and "
          "the lane replacing it, plus what it costs the plant absorbing the work.”"],
-        ["7b", "Optimization Map", "Pause on **FIX 2**, point at the free-hours card.",
+        ["7b", "Mitigation & Recovery", "Pause on **FIX 2**, point at the free-hours card.",
          "**Pause here.** “San Jose had 282 spare hours. Fix one took 98. Fix two takes "
          "another 147 and leaves 36 — 1.4% headroom. You can watch the buffer being spent.”"],
-        ["7c", "Optimization Map", "Let it run to **RESULT**.",
+        ["7c", "Mitigation & Recovery", "Let it run to **RESULT**.",
          f"“{hur['protectedPct']}% protected, and San Jose ends at "
          f"{sj['utilizationAfter'] if sj else 98.6}% with zero spare units left. "
          f"The plan works and it moves our single point of failure rather than removing it. "
          f"I would rather know that now than discover it in week three.”"],
-        ["8", "Optimization Map", "Point at the two **BLOCKED** beats.",
+        ["8", "Mitigation & Recovery", "Point at the two **BLOCKED** beats.",
          f"“And {money(hur['unprotected'])} cannot be moved at any price. Penang is the only "
          f"plant that makes die sorting. That is not an operations problem, it is an "
          f"investment decision.”"],
-        ["9", "Mitigation", "Click **Brief me**, then ask a follow-up.",
+        ["9", "Mitigation & Recovery", "Click **Brief me**, then ask a follow-up.",
          "“The AI reads the numbers the simulation produced — it does not invent them. "
          "Ask it what happens if the outage runs twice as long.”"],
     ])
@@ -211,7 +208,7 @@ def main():
     qa(doc, [
         ("Is this real data or a demo dataset?",
          "The network, the volumes, the values, plant capacity and inventory are all real SAP "
-         "data products in Snowflake. Two things are derived and the tool labels them: which "
+         "data in Snowflake, read through the governed ontology. Two things are derived and the tool labels them: which "
          "plant can substitute for another, and hours consumed per unit."),
         ("How accurate is the 12-day figure?",
          "It is the minimum days of inventory from material stock data. We deliberately use "
@@ -244,7 +241,7 @@ def main():
         ["2", "Scenario Studio", "Stay on the headline numbers. Do not open the map.",
          "“The difference is not severity or duration. It is structure — whether anyone else "
          "can make what that site makes.”"],
-        ["3", "Mitigation", "Show the blocked list for Penang.",
+        ["3", "Mitigation & Recovery", "Show the blocked list for Penang.",
          "“Nothing can be rerouted, because Penang is the only plant that makes die sorting. "
          "No amount of spare capacity elsewhere helps.”"],
         ["4", "—", "Present the sole-source table below.",
@@ -294,21 +291,21 @@ def main():
          "provenance.")
 
     beats(doc, [
-        ["1", "Mitigation", "Open on a scenario already run. Point at the four tiles.",
+        ["1", "Mitigation & Recovery", "Open on a scenario already run. Point at the four tiles.",
          f"“One disruption, four numbers. {money(hur['revenue'])} of customer revenue at risk. "
          f"{money(hur['protected'])} defensible. {money(hur['unprotected'])} not. "
          f"{len(hur['reroutes'])} actions required.”"],
-        ["2", "Mitigation", "Point at the reroute table's hours columns.",
+        ["2", "Mitigation & Recovery", "Point at the reroute table's hours columns.",
          "“Each action is costed in capacity, not guessed. 98 hours of 282 free. The "
          "constraint is real and it is in the data.”"],
-        ["3", "Mitigation", "Point at the blocked rows and their reasons.",
+        ["3", "Mitigation & Recovery", "Point at the blocked rows and their reasons.",
          "“This is the part that matters for provisioning. It is not unquantified risk — it is "
          "a specific figure against a specific cause.”"],
         ["4", "Scenario Studio", "Show the scenario library totals.",
          "“Run across our six standing scenarios, exposure ranges from "
          f"{money(3_734_988)} to {money(hur['risk'])}. That is a distribution you can plan "
          f"a contingency against rather than a single worst case.”"],
-        ["5", "Mitigation", "Scroll to the limits panel at the foot of the page.",
+        ["5", "Mitigation & Recovery", "Scroll to the limits panel at the foot of the page.",
          "“And the tool states its own assumptions. Anything derived is labelled derived. "
          "I would rather bring you a number with its caveats attached.”"],
     ])
@@ -356,18 +353,18 @@ def main():
         ["2", "Scenario Studio", "Point at the band and marker on the bars.",
          "“Grey band is the normal operating range, the line is full capacity. Not a dial — "
          "you can read the actual distance to the limit.”"],
-        ["3", "Mitigation", "Show the two reroutes going to San Jose.",
+        ["3", "Mitigation & Recovery", "Show the two reroutes going to San Jose.",
          f"“San Jose is asked to take {sj['unitsAdded'] if sj else 5} units a month across two "
          f"product lines — {sj['hrsAdded'] if sj else 245.8} hours.”"],
-        ["4", "Optimization Map", "Set **time per step** to 8s, press **Play the recovery**.",
+        ["4", "Mitigation & Recovery", "Set **time per step** to 8s, press **Play the recovery**.",
          "“This is the ask arriving one line at a time, in hours. Slow it down — you want to "
          "see each one land rather than read a total.”"],
-        ["4b", "Optimization Map", "Pause on **FIX 1**, read the free-hours card.",
+        ["4b", "Mitigation & Recovery", "Pause on **FIX 1**, read the free-hours card.",
          "“First ask: 98 hours of the 282 I had free. Headroom drops to 7.1%. Still workable.”"],
-        ["4c", "Optimization Map", "Step to **FIX 2**.",
+        ["4c", "Mitigation & Recovery", "Step to **FIX 2**.",
          "“Second ask: another 147 hours. Now I am at 36 free hours and 1.4% headroom. "
          "This is the point where I would say something in the meeting.”"],
-        ["4d", "Optimization Map", "Let it reach **RESULT** and point at the red badge.",
+        ["4d", "Mitigation & Recovery", "Let it reach **RESULT** and point at the red badge.",
          f"“{sj['utilizationBefore'] if sj else 89.1}% to "
          f"{sj['utilizationAfter'] if sj else 98.6}%, zero spare units, flagged NEW WEAK POINT. "
          f"The tool says it before I have to — above 95% there is no recovery room if anything "
@@ -375,10 +372,10 @@ def main():
         ["5", "Scenario Studio", "Run **Partial loss — Dresden Fab at 60%**.",
          "“Now the opposite answer. Dresden has the least headroom in the network, so when it "
          "is the one in trouble only 44.7% of the exposure can be moved.”"],
-        ["5b", "Optimization Map", "Play it and watch the progress bar stall.",
+        ["5b", "Mitigation & Recovery", "Play it and watch the progress bar stall.",
          "“Same page, same method. The green bar is what gets defended and it stops well short. "
          "That is what low headroom looks like when you need it.”"],
-        ["6", "Mitigation", "Point at a blocked row citing no spare capacity.",
+        ["6", "Mitigation & Recovery", "Point at a blocked row citing no spare capacity.",
          "“When the answer is no, it says no and tells you how many units short. That is a "
          "conversation about overtime or displacing lower-value work — not a surprise in "
          "week two.”"],
@@ -434,14 +431,14 @@ def main():
         ["4", "Ripple Map", "Click Penang and read the buffer line in the step panel.",
          "“And I know the timing. Penang holds 12 days of stock, so those two accounts are "
          "fine for a fortnight. That changes whether I call today or next week.”"],
-        ["5", "Mitigation", "Show which customers the reroutes protect.",
+        ["5", "Mitigation & Recovery", "Show which customers the reroutes protect.",
          f"“{by_cust[0]['customer']} and {by_cust[1]['customer']} I can protect by moving "
          f"production to San Jose. So those are reassurance calls.”"],
-        ["6", "Mitigation", "Point at the blocked die sorting rows.",
+        ["6", "Mitigation & Recovery", "Point at the blocked die sorting rows.",
          f"“{by_cust[2]['customer']} and {by_cust[3]['customer']} I cannot protect — nobody "
          f"else makes die sorting. Those are honest-conversation calls, and I would rather "
          f"make them early.”"],
-        ["7", "Mitigation", "Ask the AI: “What should I tell the affected customers?”",
+        ["7", "Mitigation & Recovery", "Ask the AI: “What should I tell the affected customers?”",
          "“And it will draft the position for each one from the same numbers.”"],
     ])
 
@@ -478,71 +475,67 @@ def main():
         "How does this work, and what did it cost us in data movement and new infrastructure?")
 
     body(doc,
-         "This is the only script that starts on the ontology pages. The point to land is that "
-         "the scenario capability is a thin layer over data that was already in place — no "
-         "pipeline, no copies, no new platform.")
+         "This is the only script that starts on the Ontology page. The point to land is that "
+         "the app names no table: every input is found by walking a governed Snowflake "
+         "Business Ontology domain and reading the representation a steward linked to each "
+         "concept.")
 
+    rt = X["rel_types"]
     beats(doc, [
-        ["1", "Ontology Model", "Open the model. Leave the toggle on Both.",
-         "“Start with the model rather than the data. Fifteen classes, eleven relations. "
-         "Five of those classes are abstract — they hold no rows of their own and exist so "
-         "one question can span several concrete types.”"],
-        ["2", "Ontology Model", "Switch the toggle to Concrete, then back to Both.",
-         "“That is the whole argument. Strip the abstract layer and the ten remaining "
-         "classes have nothing joining them — no path from a Supplier to a Customer. Put it "
-         "back and asking for parties returns all eight customers and six suppliers "
-         "together.”"],
-        ["3", "Ontology Model", "Select Party. Read the breakdown card.",
-         "“And it is demonstrated, not asserted. One view, two concrete types, fourteen "
-         "rows. The relation table below marks canSubstituteFor as inferred — nothing "
-         "stores it, a rule derives it from which plants make the same category.”"],
-        ["4", "SAP BDC Catalog", "Open the catalog. Filter to one process.",
-         "“Start with what SAP gives us. Business Data Cloud publishes the supply chain as "
-         "governed data products, each one a set of CDS entities with declared "
-         "relationships.”"],
-        ["5", "SAP BDC Catalog", "Expand a data product to show its entities.",
-         "“36 supply-chain data products, 338 entities, 281 declared associations. The "
-         "relationships are in SAP's own metadata — we did not reverse-engineer them from "
-         "column names.”"],
-        ["6", "Graph Traversal", "Show the amber topology panel.",
-         "“And we measured the shape rather than assuming it. No association crosses a data "
-         "product boundary; cross-product linkage runs entirely through one canonical object, "
-         "Plant. That is a finding, and the page says so.”"],
-        ["7", "Ask Cortex", "Ask a question and expand the generated SQL.",
-         "“Natural language over a governed semantic view, and it shows you the SQL. The "
-         "answer is auditable, not asserted.”"],
-        ["8", "Scenario Studio", "Switch to the scenario section.",
-         f"“Now the scenario layer. {nt['nodes']} nodes, {nt['flows']} flows, "
-         f"{money(nt['monthly_value'])} a month — all views over existing Snowflake tables. "
-         f"No copies, so this and operational reporting cannot disagree.”"],
-        ["9", "Ripple Map", "Run a scenario and note the response time.",
+        ["1", "Ontology", "Open the Ontology page. Let the graph settle.",
+         f"“This is the governed Supply Chain domain in Snowflake Business Ontology — "
+         f"{X['concepts']} concepts, {X['relationships']} typed relationships, "
+         f"{X['representations']} representations. A steward owns it in Snowsight; the app "
+         f"only reads it.”"],
+        ["2", "Ontology", "Click **Supplier**. Read the definition and relationships.",
+         "“Each concept carries a definition, synonyms, its relationships and its change "
+         "history. Supplier supplies Plant; Plant ships to Customer. Those two relationships "
+         "are how the app finds the network.”"],
+        ["3", "Ontology", "Scroll to **Representations** on the same concept.",
+         "“And this is where its data lives — the Snowflake object the steward linked. The "
+         "app reads from here. Change the representation and the next refresh reads from "
+         "the new place, with no code change.”"],
+        ["4", "Ontology", "Show the table of what the app reads through the ontology.",
+         f"“Every input on every page, with the walk that found it: {rt.get('IS_A', 0)} IS_A, "
+         f"{rt.get('CUSTOM', 0)} custom, {rt.get('HAS_PART', 0)} has-part and "
+         f"{rt.get('CLASSIFIES', 0)} classifies relationship. Material flows, for instance, "
+         f"are the IS_A kinds of what Material Category classifies.”"],
+        ["5", "Scenario Studio", "Switch to the scenario section.",
+         f"“The scenario network came out of that walk — {nt['nodes']} nodes, "
+         f"{nt['flows']} flows, {money(nt['monthly_value'])} a month, read from views over "
+         f"SAP data. No copies, so this and operational reporting cannot disagree.”"],
+        ["6", "Ripple Map", "Run a scenario and note the response time.",
          "“Propagation runs in the application, not the warehouse. Nineteen nodes and 27 "
-         "flows simulate in microseconds, so the UI recomputes on every slider move. A "
-         "warehouse round-trip per keystroke would buy nothing.”"],
-        ["10", "Mitigation", "Click Brief me.",
-         "“The narrative uses AI_COMPLETE, deliberately not Cortex Analyst. The ripple exists "
-         "only in memory — Analyst would query the undisrupted network and confidently answer "
-         "the wrong question.”"],
-        ["11", "—", "Summarise the build.",
-         "“Views, one semantic view, a static JSON export and an application. No ETL, no new "
-         "platform, and a verification harness that runs 20 assertions across five disruption "
-         "types on every change.”"],
+         "flows simulate in microseconds, so the UI recomputes on every slider move.”"],
+        ["7", "Digital Thread", "Pick a deviating component lot.",
+         f"“The same pattern answers traceability. System Serial has part Component Lot, "
+         f"shipped on Sales Order, placed by Customer — walk it and you know which customers "
+         f"a bad lot reached. {X['systems']} systems, {X['lots']} lots, "
+         f"{X['deviating_lots']} with a deviation.”"],
+        ["8", "Mitigation & Recovery", "Click **Brief me** or **Ask Cortex**.",
+         "“The AI is AI_COMPLETE, handed the computed scenario and the governed definitions "
+         "as facts. It interprets; it does not calculate, so every number stays auditable.”"],
+        ["9", "—", "Summarise the build.",
+         "“One governed domain, three exporters that walk it, a reconcile step that fails "
+         "the refresh if the served files drift from the ontology, and an application. No "
+         "ETL and no new platform.”"],
     ])
 
     h2(doc, "What was actually built")
     table(doc, ["Layer", "What exists", "Data movement"], [
-        ["SAP BDC → Snowflake", "Existing data products", "**None** — already in place"],
-        ["Ontology", "6 views + 1 semantic view over shared CORE tables", "**None** — views only"],
-        ["Scenario network", "5 views over SAP_SUPPLY_CHAIN", "**None** — views only"],
-        ["Served artifact", "One 23 KB JSON export, regenerated on demand", "Export only"],
-        ["Application", "Node API + React client", "Reads the JSON"],
-        ["AI", "AI_COMPLETE for narrative; Analyst for the ontology", "Prompt only"],
+        ["SAP data → Snowflake", "SAP_SUPPLY_CHAIN tables, views and dynamic tables", "**None** — already in place"],
+        ["Ontology", f"Business Ontology domain: {X['concepts']} concepts, "
+                     f"{X['relationships']} relationships, {X['representations']} representations",
+         "**None** — metadata"],
+        ["Served artifact", "Three JSON exports found by walking the domain; `npm run refresh`", "Export only"],
+        ["Application", "Node API + React client, seven pages", "Reads the JSON"],
+        ["AI", "AI_COMPLETE (claude-opus-5-5) for briefings and Ask Cortex", "Prompt only"],
     ], [1.75, 3.35, 1.8], size=9, zebra=True)
 
     callout(doc, "Close on:",
-            "“The expensive part — getting governed SAP data into Snowflake with its semantics "
-            "intact — was already done. Scenario modelling turned out to be a thin layer on "
-            "top of it, which is the whole argument for doing the foundation properly.”",
+            "“The relationships live in one governed place and every page reads through it. "
+            "That is what lets the next application reuse them instead of rediscovering them "
+            "from column names.”",
             fill="EEF4F8", size=10)
 
     qa(doc, [
@@ -550,13 +543,13 @@ def main():
          "Interactivity. At 19 nodes the graph fits in memory and a scenario is microseconds. "
          "If the network were thousands of nodes the answer would flip to graph processing in "
          "the warehouse."),
-        ("What happens when the SAP catalog changes?",
-         "Three scripted commands re-slice the ontology, re-assert Snowflake/JSON parity and "
-         "re-snapshot the public build. The parity check fails the run if the two "
-         "implementations of the scope rule have drifted."),
+        ("What happens when the ontology changes?",
+         "One command, npm run refresh, re-walks the domain, re-exports, re-bakes the public "
+         "build and then reconciles: it walks the domain again and fails if the served files "
+         "no longer match."),
         ("Could this point at a customer's network instead?",
          "Yes. The scenario logic reads a network contract, not this dataset. The work would be "
-         "mapping their tables to the five views."),
+         "linking their objects as representations of the same concepts."),
     ])
 
     doc.save(OUT)

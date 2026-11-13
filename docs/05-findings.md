@@ -1,10 +1,17 @@
 # 5. Findings
 
 Things that were not obvious, cost real time, and are worth knowing before
-building something similar. Two are properties of the SAP data; two are Cortex
-Analyst behaviours.
+building something similar. The first three sections date from the SAP BDC
+catalog explorer and its semantic view, both removed on 13 Nov 2026; they are
+kept as history because the lessons transfer. Everything from "Percent-escapes"
+on applies to the current app.
 
 ---
+
+## History — catalog-era findings
+
+> Superseded. These describe the catalog pages and natural-language query page
+> the app no longer has.
 
 ## The graph is not what it looks like
 
@@ -362,6 +369,9 @@ the arithmetic exact and the card readable.
 ---
 
 ## Lessons from the ontology layer
+
+> History. The app class model (`ONT_*`/`KG_*`) these describe was replaced by
+> Snowflake Business Ontology on 13 Nov 2026; the lessons stand.
 
 **A metadata schema that cannot express abstractness undercuts the model it
 describes.** `ONT_RELATION_DEF` carries `IS_HIERARCHICAL` and `IS_TRANSITIVE` but

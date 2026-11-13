@@ -13,14 +13,15 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5179>. Eleven of the twelve pages work immediately from the
-two committed data files — `data/sc_ontology.json` for the ontology pages and
-`data/sc_network.json` for the scenario pages. No Snowflake connection is needed for
-any of them.
+Open <http://localhost:5179>. All seven pages work immediately from the three
+committed data files — `data/sc_business_ontology.json` (the governed domain),
+`data/sc_network.json` (the scenario network) and `data/sc_ops_thread.json`
+(digital thread and operations pulse). No Snowflake connection is needed.
 
-Two things need credentials: **Ask Cortex** (Cortex Analyst) and the **AI
-briefing** on the Mitigation page (`AI_COMPLETE`). Both state what is missing rather
-than failing silently, and the scenario simulation and optimizer work without them.
+Two things need credentials: the **Ask Cortex** buttons and the **AI briefing**
+on Mitigation & Recovery, both `AI_COMPLETE` with `claude-opus-5-5`. Both state
+what is missing rather than failing silently; simulation and the optimizer work
+without them.
 
 ```bash
 cp server/.env.example server/.env
@@ -28,116 +29,56 @@ cp server/.env.example server/.env
 npm run dev
 ```
 
-The Ask page states what is missing if the configuration is incomplete, rather
-than failing silently.
-
 ---
 
 ## Scripts
 
 | Command | Does |
 |---|---|
-`npm run dev` | Server :3009 and client :5179 together |
-`npm run build` | Typecheck and build both workspaces |
-`npm run start` | Run the built server |
-`npm run export-data` | Rebuild `data/sc_ontology.json` from the parent catalog |
-`npm run deploy-views` | Create the Snowflake views, assert parity, fail on drift |
-`npm run bake` | Snapshot the live API to `client/public/data/` |
-`npm run build:static` | Build the credential-free public bundle |
-`npm run preview:static` | Serve that bundle on :8899 |
-`npm run deploy-scenario` | Create `SAP_SUPPLY_CHAIN.SCENARIO`, verify row counts and join fanout |
-`npm run export-network` | Export the scenario network to `data/sc_network.json` |
-`npm run build-land` | Fetch and convert the world land outline (run once) |
-`npm run verify-scenario` | Build the server, then assert 20 checks across all five disruption kinds |
-
-`export-data` needs the [parent explorer](06-references.md#parent-project) as a
-sibling directory — it imports `ontology_builder` rather than duplicating it.
-
-Two Word deliverables are generated separately, and both read from the running app
-so their figures cannot be transcribed wrongly:
-
-```bash
-python3 tools/build_management_summary.py   # executive briefing
-python3 tools/build_demo_scripts.py        # six per-persona demo scripts
-```
-
-Layout helpers are in `tools/docx_kit.py`, shared by both. When changing it, check
-the other document still renders — the management summary was verified byte-identical
-across the extraction, and that check is worth repeating.
+| `npm run dev` | Server :3009 and client :5179 together |
+| `npm run build` | Typecheck and build both workspaces |
+| `npm run start` | Run the built server |
+| `npm run refresh` | Re-export the domain, network and thread, bake, reconcile |
+| `npm run export-network` | Walk the domain into `data/sc_network.json` only |
+| `npm run bake` | Snapshot the live API to `client/public/data/` |
+| `npm run build:static` | Build the credential-free public bundle |
+| `npm run preview:static` | Serve that bundle on :8899 |
+| `npm run build-land` | Fetch and convert the world land outline (run once) |
+| `npm run verify-scenario` | Build the server, then assert checks across all five disruption kinds |
+| `npm run docs-word` | Word versions of these documents |
+| `npm run video` | Re-record the narrated walkthrough |
 
 ---
 
 ## Ports
 
-| Port | Process |
+| Port | What |
 |---|---|
-3009 | Express API |
-5179 | Vite dev server (proxies `/api` → 3009) |
-8899 | Static preview |
-
-Both app ports are `strictPort`, so a clash fails loudly instead of silently
-moving. If 3009 is taken, change `PORT` in `server/.env` **and** the proxy target
-in `client/vite.config.ts` — they must match.
+| 3009 | Express API (`PORT` in `server/.env`) |
+| 5179 | Vite dev client, proxies `/api` to 3009 |
+| 8899 | `preview:static` |
 
 ---
 
-## Refreshing after the SAP catalog changes
+## Refreshing after the ontology changes
 
-In order:
-
-```bash
-npm run export-data     # re-slice from the parent catalog
-npm run deploy-views    # re-assert Snowflake/JSON parity
-npm run bake            # re-snapshot for the public build
-```
-
-`deploy-views` is the gate. If the Python and SQL scope rules have drifted it
-exits non-zero, and the run stops before a mismatched semantic view can go out.
-
-If product or entity counts change, the figures quoted in these docs and in the
-README go stale. The app reads them live; the prose does not.
-
-The scenario network refreshes independently, since it comes from different tables:
+When a steward changes a concept, relationship or representation in the Supply
+Chain domain, run one command:
 
 ```bash
-npm run deploy-scenario   # rebuild the SCENARIO views
-npm run export-network    # re-export the served network
-npm run verify-scenario   # 20 assertions before trusting it
+npm run refresh          # python3 tools/refresh_all.py
+npm run refresh -- --check   # reconcile only, change nothing
 ```
 
-Run `verify-scenario` after **any** change to `scenario.ts` or `mitigate.ts`. It is
-what caught a rate mismatch and a silently zero-valued lane closure; see
-[findings](05-findings.md#the-rate-mismatch).
+It runs, in order: `export_business_ontology.py`, `export_ontology_network.py`,
+`export_ops_thread.py`, a server build, a server on a free port,
+`bake_static.py`, then a reconcile that re-walks the domain and compares it with
+what was just exported. Any mismatch fails the run.
 
----
-
-## Editing the semantic view
-
-Always through the CLI:
-
-```bash
-cortex agent-studio sv-edit --file-path SUPPLY_CHAIN_ONTOLOGY_MODEL.sv.yaml \
-  --operations '[{"operation":"validate_yaml"}]'
-
-cortex agent-studio sv-deploy \
-  --file-path cortex_project/SUPPLY_CHAIN_ONTOLOGY_MODEL.sv.yaml \
-  --fqn SAP_BDC_ONTOLOGY.SUPPLY_CHAIN.SUPPLY_CHAIN_ONTOLOGY_MODEL
-```
-
-After **any** edit, do both of these:
-
-1. **Count facts and metrics.** `sv-edit` can report success and silently drop an
-   operation.
-2. **Run the example questions.** A model that validates and deploys clean can
-   still fail every query.
-
-```bash
-curl -s localhost:3009/api/ask/examples | python3 -c '
-import json,sys
-for q in json.load(sys.stdin): print(q)'
-```
-
-Read [findings](05-findings.md#the-semantic-view-trap) before changing facts.
+Then check the diff of `data/` and `client/public/data/` before committing.
+A changed scenario total is either a real data change or a broken walk; read the
+`lineage` block in `data/sc_network.json` to see which object each input
+resolved to.
 
 ---
 
@@ -146,20 +87,14 @@ Read [findings](05-findings.md#the-semantic-view-trap) before changing facts.
 GitHub Pages builds from the committed snapshots.
 
 ```bash
-npm run dev             # one shell
-npm run bake            # another
-git add client/public/data
+npm run refresh         # or: npm run dev, then npm run bake
+git add data client/public/data
 git commit -m "refresh snapshots"
 git push
 ```
 
 `.github/workflows/deploy.yml` runs on pushes touching `client/**`, refuses to
-deploy with fewer than 20 snapshots, and builds with
-`BASE_PATH=/<repo-name>/` because Pages serves project sites from a
-subdirectory.
-
-Enable it once under **Settings → Pages → Source: GitHub Actions**.
-
+deploy with too few snapshots, and builds with `BASE_PATH=/<repo-name>/`.
 The guard exists because a missing-snapshot build succeeds and produces a site
 where every page renders empty — worse than a red build.
 
@@ -167,29 +102,19 @@ where every page renders empty — worse than a red build.
 
 ## What the public build can and cannot do
 
-It **can** run every ontology page, and the whole scenario section for the six
-preset disruptions — the ripple animation with its camera and per-beat narration,
-the mitigation plan, and the Optimization Map's beat-by-beat recovery. Simulate is
-a POST that a static site cannot call, so one result per preset is baked and keyed
-by a signature of the disruption; the Optimization Map needs no extra data because
-it reads the `plan` already inside that same result.
+It **can** run every page: the dashboard, the Ontology page with each concept's
+detail, the digital thread, and the scenario section for the nine preset
+disruptions — ripple animation, mitigation plan and the recovery movie. Simulate
+is a POST, so one result per preset is baked and keyed by a signature of the
+disruption.
 
-It **cannot** do these, each stated on screen rather than left to fail:
+It **cannot**, each stated on screen:
 
-- **Ask** — needs Snowflake credentials, which a public site cannot hold.
-- **The scenario AI briefing** — same reason. The simulation and the optimizer
-  behind it still work, so every number on the page is real.
-- **Custom disruptions** — the sliders need the live app, because the simulation
-  runs server-side. Scenario Studio says so up front rather than letting someone
-  drag a slider into a dead end.
-- **Shortest path** — the pair space is quadratic; only expansion from the 24
-  most-connected entities is baked.
-
-Everything else works from the snapshot.
+- **Ask Cortex and the scenario AI** — need Snowflake credentials.
+- **Custom disruptions** — the sliders need the live server.
 
 The simulate filename rule lives in both `tools/bake_static.py` (`sim_name`) and
-`client/src/lib/api.ts` (`simName`). The two must stay identical, exactly like the
-snapshot filename rule.
+`client/src/lib/api.ts` (`simName`). The two must stay identical.
 
 ---
 
@@ -205,7 +130,7 @@ npm run docs-word        # or: python3 tools/build_docs_docx.py
 Writes nine files to `~/Documents/SAP/Supply_Chain_Ontology_Docs/` — one per source
 document plus a combined handbook with a contents page — alongside the two
 narrative deliverables (`Supply_Chain_Ontology_Management_Summary.docx` and
-`..._Demo_Scripts.docx`), which are generated separately from live application data.
+`..._Demo_Scripts.docx`), which are generated separately from `tools/facts.py` and the live API.
 
 `tools/build_docs_docx.py` is a bespoke renderer rather than a pandoc call, because
 the output has to match the existing Word deliverables: same palette, page setup,
@@ -231,7 +156,7 @@ source, and no `**`, `` ` `` or `](http` should survive outside a code block.
 
 ## The narrated walkthrough video
 
-A four-and-a-half minute video of the Austin hurricane scenario, driving the real
+A four-minute video (recorded before the 13 Nov 2026 rebuild, so it shows the earlier page layout) of the Austin hurricane scenario, driving the real
 app rather than a mock-up.
 
 ```bash
@@ -286,34 +211,22 @@ mid-segment and confirm the bottom band is not uniform navy.
 
 ## Troubleshooting
 
-**Ask returns `invalid identifier`** — a numeric column was promoted to a fact.
-See [findings](05-findings.md#the-semantic-view-trap). The error response
-includes the generated SQL; read it.
-
 **A page is empty in the static build** — that view was not baked. Check
 `client/public/data/` for the expected filename; the client shows "not in this
 snapshot" rather than crashing.
 
-**Traversal snapshots 404 in the static build** — the filename sanitizer in
-`tools/bake_static.py` and `client/src/lib/api.ts` has drifted. They must apply
-the identical substitution. Test over HTTP, not off disk.
-
-**`deploy-views` fails parity** — the Python and SQL scope rules disagree. Fix
-the rule, do not weaken the check.
-
-**Shortest path always says "no path"** — expected between different components.
-The graph is 94 components; see
-[findings](05-findings.md#the-graph-is-not-what-it-looks-like).
+**`npm run refresh` fails at reconcile** — the domain changed between export and
+re-walk, or a walk no longer resolves (a relationship renamed, a representation
+removed). Read the message: it names the concept. Fix the domain or the walk,
+do not weaken the check.
 
 **A scenario reports $0 at risk** — check it is not a lane closure, and re-run
-`npm run verify-scenario`. A zero is indistinguishable from good news, so the
-harness asserts non-zero where non-zero is structurally certain.
+`npm run verify-scenario`. A zero is indistinguishable from good news.
 
-**The scenario AI errors with "unknown model"** — `SCENARIO_LLM_MODEL` names a model
-this account does not serve. Probe with
-`SELECT AI_COMPLETE('claude-4-sonnet', 'ok')` and set the variable accordingly.
+**The AI errors with "unknown model"** — `SCENARIO_LLM_MODEL` names a model this
+account does not serve. Probe with `SELECT AI_COMPLETE('claude-opus-5-5', 'ok')`
+and set the variable accordingly.
 
 **Pages deploys fail on `npm ci` but local builds pass** — the lockfile and the
-workspace names have diverged. `npm install` repairs that silently; `npm ci` refuses
-to. Run `npm install`, commit the lockfile. See
+workspace names have diverged. Run `npm install`, commit the lockfile. See
 [findings](05-findings.md#npm-install-forgives-what-npm-ci-refuses).

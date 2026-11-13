@@ -1,116 +1,104 @@
 # 1. Concepts
 
-What an ontology is in this context, and why the SAP BDC catalog is a reasonable
-place to build one.
+What an ontology is in this app, and why Snowflake Business Ontology is where it
+lives.
 
 ---
 
 ## The problem this addresses
 
 A supply chain does not live in one system. The material master sits in
-S/4HANA, the supplier profile in Ariba, the sensor feed and the risk score
-outside SAP entirely. Each system names the same real-world object differently,
-and nothing in any of them declares how they relate.
+S/4HANA, the supplier profile in Ariba, the sensor feed and the inspection
+result outside SAP entirely. Each system names the same real-world object
+differently, and nothing in any of them declares how they relate.
 
 The usual response is to hard-code joins in each report. That works until
-someone asks a question nobody anticipated, at which point the relationships
-have to be rediscovered from column names and tribal knowledge.
+someone asks a question nobody anticipated — "a supplier fails, which customers
+lose revenue?" — at which point the relationships have to be rediscovered from
+column names and tribal knowledge.
 
-An ontology inverts this: **the relationships become data**, queryable in the
-same way the rows are.
+An ontology inverts this: **the relationships become governed data**, defined
+once by a steward and read by every application.
 
 ---
 
-## Why SAP BDC is a good starting point
+## The governed domain
 
-SAP Business Data Cloud publishes the supply chain as **data products**. Each
-one is a set of CDS entities carrying declared associations and semantic
-annotations. That declaration is the raw material for an ontology — the
-relationships are already in the metadata, not reverse-engineered.
+The app runs on one domain in Snowflake Business Ontology: **Supply Chain**
+(account MSB89522).
 
-Three layers matter here:
-
-| Layer | What it is | Count in this slice |
+| Element | What it is | Count |
 |---|---|---|
-**Business process** | SAP's end-to-end value chain (Design to Operate, Source to Pay, Lead to Cash) | 3 |
-**Data product** | A governed publication unit, e.g. Bill of Material | 36 |
-**CDS entity** | A view inside a product, e.g. `BillOfMaterialItem` | 338 |
+| **Concept** | A governed business term — 20 entities (Supplier, Plant, Sales Order, Component Lot…) and 1 term (Material Category) | 21 |
+| **Relationship** | A typed link between concepts | 26 |
+| **Representation** | The Snowflake object a steward linked to a concept as the place its data lives | 25 |
 
-Entities associate with one another (281 associations here), and products link
-to one another through shared master data.
+The 26 relationships are of four types:
 
----
-
-## Semantic roles
-
-Every CDS entity carries annotations that say what it is *for*, not merely what
-it contains. Classifying on those annotations gives each entity a role:
-
-| Role | Meaning | Entities |
+| Type | Count | Example |
 |---|---|---|
-`dimension` | A business object you slice by | 115 |
-`other` | No role annotation present | 101 |
-`text` | Language-dependent descriptions | 87 |
-`fact` | Measures and transactional cubes | 35 |
+| `IS_A` | 13 | Inbound Flow IS_A Material Flow; Supplier IS_A Party |
+| `CUSTOM` | 9 | Supplier **supplies** Plant; Sales Order **fulfilled by** Plant |
+| `HAS_PART` | 3 | System Serial has part Component Lot |
+| `CLASSIFIES` | 1 | Material Category classifies Material Flow |
 
-This is the difference between a catalog and an ontology. A catalog tells you
-`BillOfMaterialItem` exists. The roles tell you it is a fact table, which is
-what makes automated semantic-model generation possible.
+Four concepts — Catalog Object, Business Process, Data Product, CDS Entity —
+record where the domain came from (the SAP BDC catalog). No page reads them as
+data; they appear in the Ontology graph as provenance.
 
-That `other` bucket is 30% of entities and is not noise to be ignored — it is a
-concrete measure of how much of the catalog carries no usable role annotation.
-
----
-
-## The ODM overlay
-
-Data products also reference **canonical objects** from SAP's One Domain Model:
-shared master-data concepts that several products describe from different
-angles. Where two products reference the same canonical object, they are
-talking about the same real-world thing.
-
-This is the layer at which cross-product linkage exists. In this slice it is
-remarkably concentrated — see [findings](05-findings.md).
+Each concept carries a definition, synonyms, change history and a link to
+Snowsight, all of which the **Ontology** page shows.
 
 ---
 
-## What this is not
+## Built on the ontology, not beside it
 
-This models **metadata about SAP data products**: which entities exist, how they
-are annotated, and how they associate.
+Nothing in the app names a table. Every input is found by **walking** the
+domain, then read from the **representation** linked to the concept it reached:
 
-It is **not transactional supply chain data**. There are no shipments, inventory
-levels, purchase orders or supplier risk scores in here. Questions like "which
-supplier is late" cannot be answered by this ontology, and the semantic view
-says so explicitly so Cortex Analyst does not try.
+| App input | Found by walking | Representation |
+|---|---|---|
+| Suppliers, plants, customers | endpoints of **supplies** and **ships to** | `VW_ONT_SUPPLIER`, `VW_ONT_PLANT`, `VW_ONT_CUSTOMER` |
+| Material flows | IS_A children of the concept Material Category classifies | `VW_ONT_INBOUNDFLOW`, `…OUTBOUNDFLOW`, `…INTERPLANTFLOW` |
+| Capacity and inventory | Plant | `VW_ONT_PLANT` |
+| Substitution | Plant **produces** Material Category | `V_PRODUCES` |
+| Order economics | Sales Order, fulfilled by Plant | `ANALYTICS.DT_ORDER_FULFILLMENT` |
+| Digital thread | System Serial has part Component Lot, shipped on Sales Order | `VW_ONT_LOT_BLAST_RADIUS` plus concept views |
+| Operations pulse | Plant, Equipment | `DT_OPERATING_RATE`, `DT_COMPONENT_COVER`, `DT_EQUIPMENT_HEALTH`, `A_WORK_CENTER` |
 
-For transactional supply chain analytics see
-[`sap-bdc-supply-chain-360`](https://github.com/sfc-gh-dfreriks/sap-bdc-supply-chain-360).
-For a knowledge graph of actual supply-chain objects — suppliers, shipments,
-plants, risk — see
-[`supplychain_ontology_agent`](https://github.com/sfc-gh-tjia/supplychain_ontology_agent).
-Both are credited in [references](06-references.md).
+The consequence is the point of the design: change a relationship or a
+representation in Snowflake and the next refresh reads from the new place, with
+no code change.
 
 ---
 
-## Scope rule
+## What the ontology does not model
 
-A data product is in scope when **either**
+Business Ontology declares concepts and how they relate. It does not carry
+rules, so four things stay in the scenario engine's code and are documented as
+such:
 
-- its business process is **Design to Operate** — SAP's supply-chain process — **or**
-- its line of business names **Supply Chain**, **Manufacturing**,
-  **Sourcing and Procurement**, or **R&D Engineering**.
+- plant-to-plant transfer as an edge type
+- cardinality
+- the substitution rule (same material category plus spare work-center hours)
+- buffer timing (days of inventory before a line stops)
 
-Line of business is a delimited multi-value string such as
-`"Manufacturing,Supply Chain"`, so it is matched **per token**. Matching the
-whole string would drop every product carrying Supply Chain alongside another
-line of business — which is most of the cross-functional ones, and the ones
-worth having.
+---
 
-This narrows the parent catalog from 334 products and 2,243 entities to 36 and
-338.
+## Real versus modelled
 
-The same rule is implemented twice — once for the app's JSON and once for the
-Snowflake views — and the deploy script asserts the two agree. See
-[architecture](02-architecture.md#one-rule-two-implementations) for why that
-check exists.
+The network, capacity, inventory and order economics are read from SAP data
+through the representations. Disruptions are **hypotheticals**: the engine
+computes them in memory, and the AI (`AI_COMPLETE`, `claude-opus-5-5`)
+interprets the computed figures rather than calculating them. The digital
+thread instances are `OPS_EXT` demo enrichment keyed to real SAP plants,
+suppliers, customers and BOMs.
+
+---
+
+## History
+
+The app began as a viewer over the SAP Business Data Cloud catalog (data
+products and CDS entities), then grew an app-owned class model. Both were
+replaced on 13 Nov 2026 by the governed domain above; the derivation is recorded
+in [the ontology layer](08-ontology-layer.md).

@@ -2,8 +2,13 @@
 """Build the slim presales deck for the SAP Partnership Compass page.
 
 Ten slides for a Snowflake SE to drop into their own deck: the problem, the
-architecture, the scenario result, what is real, and the ask. Screenshots are
-pulled from the narrated walkthrough so the slides show the actual product.
+ontology, the scenario result, what is real, and the ask. Screenshots are
+captured from the running app with Playwright (http://localhost:5179, dev server
+up) so the slides show the current product; they are cached in tools/.presales_shots
+and reused when the app is not running. The narrated walkthrough video predates
+the 13 Nov 2026 rebuild, so it is no longer used as a screenshot source.
+
+Figures come from tools/facts.py.
 
     python3 tools/build_presales_deck.py
 """
@@ -17,6 +22,11 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Emu, Inches, Pt
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import facts  # noqa: E402
+from facts import money  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 KIT = Path.home() / "Documents" / "SAP" / "Supply_Chain_Ontology_Presales_Kit"
@@ -35,41 +45,46 @@ W, H = Inches(13.333), Inches(7.5)
 
 PUBLIC_URL = "https://sfc-gh-dfreriks.github.io/supply-chain-ontology/"
 
-# name -> (video segment id, crop height in source pixels or None for full).
-# Frames are taken partway into the named segment, using the timeline the video
-# builder writes, so a re-recorded video with different pacing still lands on
-# the right screen. The crop removes the caption band below the app.
-FRAMES = {
-    "start": ("02_columns", None),
-    "ripple": ("16_ripple_sum", 1000),
-    "fix1": ("31_fix1", None),
-    "result": ("33_result", 1000),
+APP = "http://localhost:5179/"
+# name -> (hash route, scroll before capture). Scenario pages load the hurricane
+# preset through sessionStorage, the same hook the Guided Demo uses.
+SHOTS_SPEC = {
+    "scenario": ("#scenario", 0),
+    "ripple": ("#ripple", 0),
+    "mitigation": ("#mitigation", 0),
+    "plan": ("#mitigation", 1100),
+    "ontology": ("#model", 0),
 }
-TIMELINE = Path("/tmp/sc_video/timeline.json")   # written by tools/video/build.py
+PRESET = "hurricane-austin"
 
 
-def frame_time(seg_id):
-    segs = {s["id"]: s for s in json.loads(TIMELINE.read_text())["segments"]}
-    s = segs[seg_id]
-    return round(s["start"] + 0.75 * s["secs"], 2)
-
-
-def grab_frames():
+def capture_shots():
+    """Fresh screenshots from the running app, falling back to the cache."""
+    import urllib.request
     SHOTS.mkdir(parents=True, exist_ok=True)
-    out = {}
-    stale = VIDEO.stat().st_mtime
-    for name, (seg, crop) in FRAMES.items():
-        path = SHOTS / f"{name}.png"
-        if not path.exists() or path.stat().st_mtime < stale:
-            subprocess.run(
-                ["ffmpeg", "-v", "error", "-ss", str(frame_time(seg)), "-i", str(VIDEO),
-                 "-frames:v", "1", str(path), "-y"],
-                check=True,
-            )
-            if crop:
-                im = Image.open(path)
-                im.crop((0, 0, im.width, crop)).save(path)
-        out[name] = path
+    out = {n: SHOTS / f"{n}.png" for n in SHOTS_SPEC}
+    try:
+        urllib.request.urlopen(APP, timeout=3)
+    except Exception:
+        missing = [n for n, pth in out.items() if not pth.exists()]
+        if missing:
+            raise SystemExit(f"app not running at {APP} and no cached shots for {missing}")
+        print(f"  app not running; using cached shots in {SHOTS}")
+        return out
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as pw:
+        b = pw.chromium.launch()
+        pg = b.new_page(viewport={"width": 1600, "height": 1000})
+        pg.goto(APP + "#overview")
+        pg.evaluate(f"sessionStorage.setItem('sc.preset', '{PRESET}')")
+        for name, (route, scroll) in SHOTS_SPEC.items():
+            pg.goto(APP + route)
+            pg.wait_for_timeout(5000)
+            if scroll:
+                pg.mouse.wheel(0, scroll)
+                pg.wait_for_timeout(1500)
+            pg.screenshot(path=str(out[name]))
+        b.close()
     return out
 
 
@@ -217,7 +232,7 @@ def s01_title(prs, net):
         [
             ("SAP + SNOWFLAKE  ·  PRESALES KIT", 11, True, BLUE, 12),
             ("Supply Chain Ontology", 44, True, WHITE, 8),
-            ("Disruption modelling on SAP Business Data Cloud data, in place", 17, False, LIGHT, 0),
+            ("Disruption modelling built on Snowflake Business Ontology", 17, False, LIGHT, 0),
         ],
     )
     t = net["totals"]
@@ -241,7 +256,7 @@ def s01_title(prs, net):
     )
 
 
-def s02_problem(prs):
+def s02_problem(prs, hur, byc):
     s = blank(prs)
     slide_header(s, "The problem", "Every resilience plan breaks at the second hop")
     bullets(
@@ -258,8 +273,8 @@ def s02_problem(prs):
             "Then it has to be redone for every site, every duration and every partial "
             "outage. In practice that exercise takes days, so it is done once a year — "
             "if at all.",
-            "The data to answer it properly is already in SAP. It is the traversal that "
-            "is missing, not the data.",
+            "The data to answer it properly is already in SAP. What is missing is the "
+            "relationships between the objects, governed in one place.",
         ],
     )
     rect(s, Inches(7.0), Inches(1.95), Inches(5.73), Inches(3.9), LIGHT)
@@ -273,7 +288,7 @@ def s02_problem(prs):
             ("WHAT A SPREADSHEET MISSES", 9, True, BLUE, 14),
             ("Austin Fab goes offline for 60 days.", 15, True, NAVY, 10),
             ("Hop 1 — two customers lose supply directly.", 13, False, NAVY, 6),
-            ("$13.80M", 22, True, RED, 14),
+            (money(sum(c["value"] for c in byc if c["hop"] == 1)), 22, True, RED, 14),
             (
                 "Hop 2 — Austin also ships test fixtures to Penang, which runs on "
                 "12 days of stock. Penang stops too.",
@@ -282,7 +297,7 @@ def s02_problem(prs):
                 NAVY,
                 6,
             ),
-            ("$1.29M", 22, True, RED, 12),
+            (money(sum(c["value"] for c in byc if c["hop"] == 2)), 22, True, RED, 12),
             ("No one finds the second number by hand in time to act on it.", 11, True, GREY, 0),
         ],
     )
@@ -292,7 +307,7 @@ def s02_problem(prs):
 def s03_answer(prs, shots):
     s = blank(prs)
     slide_header(s, "What it does", "Runs the cascade in seconds, and shows its work")
-    picture_fit(s, shots["start"], Inches(0.6), Inches(1.72), Inches(7.6), Inches(5.2))
+    picture_fit(s, shots["scenario"], Inches(0.6), Inches(1.72), Inches(7.6), Inches(5.2))
     text(
         s,
         Inches(8.55),
@@ -322,68 +337,71 @@ def s03_answer(prs, shots):
             ),
         ],
     )
-    footer(s, "Ripple Map, step 1 of 7. Playback speed adjustable 1.5–20 seconds per step.")
+    footer(s, "Scenario Studio with the Austin hurricane preset. Screenshot from the running app.")
 
 
-def s04_ripple(prs, shots):
+def s04_ripple(prs, shots, hur, byc):
     s = blank(prs)
     slide_header(s, "The cascade", "Geography and topology, one lane at a time")
     picture_fit(s, shots["ripple"], Inches(0.6), Inches(1.72), Inches(7.6), Inches(5.2))
     kpi_column(
         s,
         [
-            ("Direct loss, hop 1", "$13.80M", RED),
-            ("Second-order loss, hop 2", "$1.29M", RED),
-            ("Total exposure", "$16.05M", RED),
-            ("Of monthly network value", "28.3%", NAVY),
+            ("Direct loss, hop 1", money(sum(c["value"] for c in byc if c["hop"] == 1)), RED),
+            ("Second-order loss, hop 2", money(sum(c["value"] for c in byc if c["hop"] == 2)), RED),
+            ("Total exposure", money(hur["valueAtRisk"]), RED),
+            ("Of monthly network value", f"{hur['pctOfNetwork']}%", NAVY),
         ],
     )
     footer(s, "Selection is synced across both panels; the camera follows each beat.")
 
 
-def s05_mitigation(prs, shots):
+def s05_mitigation(prs, shots, hur):
+    r1, r2 = hur["reroutes"][0], hur["reroutes"][1]
     s = blank(prs)
     slide_header(s, "The response", "A plan bounded by real capacity, not a percentage")
-    picture_fit(s, shots["fix1"], Inches(0.6), Inches(1.72), Inches(7.6), Inches(5.2))
+    picture_fit(s, shots["mitigation"], Inches(0.6), Inches(1.72), Inches(7.6), Inches(5.2))
     kpi_column(
         s,
         [
-            ("Fix 1 — GlobalFoundries to San Jose", "+$8.40M", GREEN),
-            ("San Jose free hours", "282h → 183.7h", NAVY),
-            ("Fix 2 — Micron to San Jose", "+$5.40M", GREEN),
-            ("Free hours remaining", "36.2h", NAVY),
+            (f"Fix 1 — {r1['customer']} to {r1['toPlant']}", f"+{money(r1['valueProtected'])}", GREEN),
+            (f"{r1['toPlant']} free hours", f"{r1['hrsAvailableBefore']:g}h → {r1['hrsAvailableBefore'] - r1['hrsRequired']:.1f}h", NAVY),
+            (f"Fix 2 — {r2['customer']} to {r2['toPlant']}", f"+{money(r2['valueProtected'])}", GREEN),
+            ("Free hours remaining", f"{r2['hrsAvailableBefore'] - r2['hrsRequired']:.1f}h", NAVY),
         ],
     )
-    footer(s, "A deterministic optimiser tests every alternative plant against real capacity. The AI interprets the result; it does not produce it.")
+    footer(s, "Mitigation & Recovery plays the plan one decision per beat. The AI interprets the result; it does not produce it.")
 
 
-def s06_result(prs, shots):
+def s06_result(prs, shots, hur):
     s = blank(prs)
-    slide_header(s, "The result", "91.4% protected — and the 8.6% that cannot be")
-    picture_fit(s, shots["result"], Inches(0.6), Inches(1.72), Inches(7.6), Inches(5.2))
+    cap = hur["capacityAfter"][0]
+    rest = round(100 - hur["protectedPct"], 1)
+    slide_header(s, "The result", f"{hur['protectedPct']}% protected — and the {rest}% that cannot be")
+    picture_fit(s, shots["plan"], Inches(0.6), Inches(1.72), Inches(7.6), Inches(5.2))
     kpi_column(
         s,
         [
-            ("Protected by rerouting", "$13.80M · 91.4%", GREEN),
-            ("Unrecoverable at any price", "$1.29M · 8.6%", RED),
-            ("San Jose utilisation", "89.1% → 98.6%", RED),
-            ("Spare units left", "0", RED),
+            ("Protected by rerouting", f"{money(hur['protected'])} · {hur['protectedPct']}%", GREEN),
+            ("Unrecoverable at any price", f"{money(hur['unprotected'])} · {rest}%", RED),
+            (f"{cap['plantName']} utilisation", f"{cap['utilizationBefore']}% → {cap['utilizationAfter']}%", RED),
+            ("Spare units left", str(cap["spareUnitsLeft"]), RED),
         ],
     )
     footer(s, "The plan relocates the risk rather than removing it. Saying so is the credibility of the whole exercise.")
 
 
-def s07_library(prs):
+def s07_library(prs, sc, X):
     s = blank(prs)
-    slide_header(s, "The library", "Six scenarios, deliberately contradictory")
+    sc = [x for x in sc if not x["id"].startswith("ops-")]
+    slide_header(s, "The library", f"{len(sc)} core scenarios, deliberately contradictory")
     rows = [
         ("Scenario", "Duration", "At risk", "Of network", "Hops", "Recoverable"),
-        ("Hurricane: Austin Fab offline", "60d", "$16.05M", "28.3%", "2", "91.4%"),
-        ("Typhoon: Penang Assembly offline", "30d", "$5.85M", "10.3%", "1", "0%"),
-        ("Supplier failure: Hamamatsu Photonics", "45d", "$9.08M", "16.0%", "3", "70.2%"),
-        ("Partial loss: Dresden Fab at 60%", "30d", "$4.12M", "7.3%", "1", "44.7%"),
-        ("Lane closed: San Jose to Penang", "40d", "$3.73M", "6.6%", "2", "0%"),
-        ("Demand spike: TSMC +60%", "30d", "$8.82M", "15.6%", "1", "—"),
+    ] + [
+        (x["label"].replace(" — ", ": "), f"{x['days']}d", money(x["valueAtRisk"]),
+         f"{x['pctOfNetwork']}%", str(x["maxHop"]),
+         "—" if x["kind"] == "demand" else f"{x['protectedPct']}%")
+        for x in sc
     ]
     widths = [Inches(4.6), Inches(1.2), Inches(1.5), Inches(1.7), Inches(1.0), Inches(2.13)]
     y = Inches(2.0)
@@ -395,7 +413,7 @@ def s07_library(prs):
             rect(s, x, y, widths[ci], rh, NAVY if head else (LIGHT if ri % 2 else WHITE))
             color = WHITE if head else NAVY
             if not head and ci == 5:
-                color = RED if cell in ("0%", "44.7%") else GREEN if cell != "—" else GREY
+                color = GREY if cell == "—" else RED if float(cell[:-1]) < 50 else GREEN
             text(
                 s,
                 x + Inches(0.14),
@@ -423,7 +441,7 @@ def s07_library(prs):
                 8,
             ),
             (
-                "6 of the product categories are made at exactly one plant. Those are the places where resilience "
+                f"{len(X['single_source'])} of the product categories are made at exactly one plant. Those are the places where resilience "
                 "has to be bought, not planned.",
                 13,
                 True,
@@ -435,83 +453,54 @@ def s07_library(prs):
     )
 
 
-def s08_architecture(prs, schema):
+def s08_architecture(prs, X, net, shots):
     s = blank(prs)
-    slide_header(s, "How it works", "No copies, and the SAP semantics survive")
-    y = Inches(1.95)
-    for layer in schema["stack"]:
-        rect(s, Inches(0.6), y, Inches(0.72), Inches(0.72), BLUE)
-        text(
-            s,
-            Inches(0.6),
-            y + Inches(0.22),
-            Inches(0.72),
-            Inches(0.3),
-            [(layer["layer"], 13, True, WHITE, 0)],
-            align=PP_ALIGN.CENTER,
-        )
-        rect(s, Inches(1.32), y, Inches(6.0), Inches(0.72), LIGHT)
-        text(
-            s,
-            Inches(1.5),
-            y + Inches(0.1),
-            Inches(5.7),
-            Inches(0.55),
-            [
-                (f"{layer['name']} — {layer['detail']}", 11, True, NAVY, 2),
-                (layer["note"], 9.5, False, GREY, 0),
-            ],
-        )
-        y += Inches(0.85)
-
-    c = schema["counts"]
+    slide_header(s, "How it works", "Built on Snowflake Business Ontology")
+    picture_fit(s, shots["ontology"], Inches(0.6), Inches(1.72), Inches(7.0), Inches(4.0))
+    lin, walk = net["lineage"], net["lineage"]["walk"]
+    rows = [
+        ("Network", walk["network"]),
+        ("Flows", "IS_A kinds of what Material Category classifies"),
+        ("Economics", walk["economics"]),
+        ("Thread", "System Serial has part Component Lot"),
+    ]
+    y = Inches(5.85)
+    for name, how in rows:
+        text(s, Inches(0.6), y, Inches(7.0), Inches(0.26),
+             [(f"{name}: {how}", 10.5, False, NAVY, 0)])
+        y += Inches(0.28)
+    rt = X["rel_types"]
     text(
         s,
-        Inches(7.7),
-        Inches(1.95),
-        Inches(5.03),
-        Inches(4.4),
+        Inches(7.95),
+        Inches(1.85),
+        Inches(4.78),
+        Inches(4.9),
         [
-            ("THE ABSTRACT LAYER IS THE POINT", 9, True, BLUE, 10),
+            ("ONE GOVERNED DOMAIN", 9, True, BLUE, 10),
             (
-                f"{c['classes']} classes — {c['abstract']} abstract, {c['concrete']} concrete — and "
-                f"{c['relations']} relations over {c['instances']:,} instances.",
-                12,
-                False,
-                NAVY,
-                12,
+                f"{X['concepts']} concepts, {X['relationships']} relationships "
+                f"({rt.get('IS_A', 0)} IS_A, {rt.get('CUSTOM', 0)} custom, "
+                f"{rt.get('HAS_PART', 0)} has-part, {rt.get('CLASSIFIES', 0)} classifies) and "
+                f"{X['representations']} representations, owned by a steward in Snowsight.",
+                12, False, NAVY, 14,
             ),
+            ("THE APP NAMES NO TABLE", 9, True, BLUE, 10),
             (
-                "Because Supplier and Customer are both Parties, one query answers "
-                "\u201cwhich parties are affected\u201d across all 14 of them. A catalog cannot "
-                "express that, which is why a catalog cannot answer it in a single pass.",
-                12,
-                False,
-                NAVY,
-                14,
+                "Every input is found by walking the domain and read from the "
+                "representation linked to the concept it reached. Change a relationship "
+                "or a representation and the next refresh reads from the new place.",
+                12, False, NAVY, 14,
             ),
-            ("WHERE THE DATA STAYS", 9, True, BLUE, 10),
+            ("VERIFIED", 9, True, BLUE, 10),
             (
-                "Snowflake views over existing SAP data products. Nothing is copied out of "
-                "SAP, no new platform is introduced, and the simulation runs in the "
-                "application — only the AI narrative calls a model.",
-                12,
-                False,
-                NAVY,
-                14,
-            ),
-            ("VERIFICATION", 9, True, BLUE, 10),
-            (
-                "An automated harness runs 20 assertions across all five disruption types on "
-                "every change.",
-                12,
-                False,
-                NAVY,
-                0,
+                "npm run refresh re-walks the ontology after exporting and fails on any "
+                "mismatch. The switch was parity-gated on all nine presets.",
+                12, False, NAVY, 0,
             ),
         ],
     )
-    footer(s, "SAP_SUPPLY_CHAIN.ONTOLOGY and SAP_BDC_ONTOLOGY.SUPPLY_CHAIN. Full inventory in 06_Setup_and_Access.")
+    footer(s, "Ontology page, screenshot from the running app. Full inventory in 06_Setup_and_Access.")
 
 
 def s09_real(prs):
@@ -526,13 +515,13 @@ def s09_real(prs):
         [("Say this before you are asked. It is what makes the numbers survive challenge.", 13, True, GREY, 0)],
     )
     rows = [
-        ("Network, flows, volumes, values", "Real — SAP data products in Snowflake", GREEN),
+        ("Network, flows, volumes, values", "Real — SAP data in Snowflake, read through the ontology", GREEN),
+        ("Digital-thread instances", "Demo enrichment keyed to real plants and BOMs", RGBColor(0xB4, 0x6A, 0x00)),
         ("Plant capacity and utilisation", "Real — work-centre capacity data", GREEN),
         ("Inventory buffer days", "Real — material stock data", GREEN),
         ("Which plant can substitute for another", "Derived from observed shipments", RGBColor(0xB4, 0x6A, 0x00)),
         ("Hours consumed per unit", "Derived, planning-grade, blended across products", RGBColor(0xB4, 0x6A, 0x00)),
         ("Qualification time for a plant change", "Not modelled", RED),
-        ("Component shortages inside a plant", "Not modelled — BOM available if taken further", RED),
     ]
     y = Inches(2.35)
     for i, (element, status, color) in enumerate(rows):
@@ -595,21 +584,25 @@ def s10_ask(prs):
 
 
 def main():
-    schema = json.loads((REPO / "data" / "sc_ontology_schema.json").read_text())
+    X = facts.build()
+    sc = facts.scenarios()
+    pf = facts.persona_facts()
+    hur, byc = pf["hurricane"], pf["hurricane_by_customer"]
+    hur.update(next(x for x in sc if x["id"] == "hurricane-austin"))
     network = json.loads((REPO / "data" / "sc_network.json").read_text())
-    shots = grab_frames()
+    shots = capture_shots()
 
     prs = Presentation()
     prs.slide_width, prs.slide_height = W, H
 
     s01_title(prs, network)
-    s02_problem(prs)
+    s02_problem(prs, hur, byc)
     s03_answer(prs, shots)
-    s04_ripple(prs, shots)
-    s05_mitigation(prs, shots)
-    s06_result(prs, shots)
-    s07_library(prs)
-    s08_architecture(prs, schema)
+    s04_ripple(prs, shots, hur, byc)
+    s05_mitigation(prs, shots, hur)
+    s06_result(prs, shots, hur)
+    s07_library(prs, sc, X)
+    s08_architecture(prs, X, network, shots)
     s09_real(prs)
     s10_ask(prs)
 

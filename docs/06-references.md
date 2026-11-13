@@ -5,33 +5,26 @@ are public.
 
 ---
 
-## Parent project
+## Snowflake Business Ontology
+
+The app's foundation since 13 Nov 2026: the governed **Supply Chain** domain on
+account MSB89522 — 21 concepts, 26 relationships, 25 representations. Every page
+reads its inputs by walking this domain; see [concepts](01-concepts.md).
+Snowsight: *Data → Business Ontology → Supply Chain*.
+
+## Parent project (history)
 
 ### [`sfc-gh-dfreriks/sap-bdc-data-products`](https://github.com/sfc-gh-dfreriks/sap-bdc-data-products)
 
 > Interactive explorer for the SAP Business Data Cloud data product portfolio,
 > mined from the public SAP Business Accelerator Hub catalog.
 
-**This project is a focused fork of it.** The parent covers the whole catalog —
-334 data products, 2,243 CDS entities, 2,376 associations across 10 business
-processes. This one narrows to the 36 supply-chain products and adds graph
-traversal, a guided demo, and a supply-chain-scoped semantic view.
-
-Directly reused, not copied:
-
-- `ontology_builder.build_ontology()` — catalog parsing, semantic-role
-  classification, association resolution, ODM overlay
-- `ontology_builder.process_rollup / correlation / scorecard / insight_apps /
-  semantic_roles / lens_summary` — re-run over the **filtered** dictionary rather
-  than having their output copied, so the figures are the slice's own and cannot
-  drift from the parent's logic
-- The React page set, `GraphCanvas`, and the Express API shape
-- `SAP_BDC_ONTOLOGY.CORE` — the Snowflake tables this project builds views over.
-  **No copies are made**; there is one source of truth.
-
-`tools/export_sc_ontology.py` imports `ontology_builder` from a sibling checkout.
-That is a hard dependency for `npm run export-data`, though not for running the
-app — `data/sc_ontology.json` is committed.
+This project started as a focused fork of it, narrowed to supply chain. The
+catalog pages and the exporter that imported the parent's `ontology_builder`
+were removed on 13 Nov 2026. What remains is provenance: four concepts in the
+domain (Catalog Object, Business Process, Data Product, CDS Entity) record that
+the domain was derived from the catalog, and the React shell and Express API
+shape still descend from the parent.
 
 ---
 
@@ -49,14 +42,13 @@ full deployable stack:
 - 1 Cortex Agent with 5 tools, 2 Iceberg tables (IoT + risk)
 
 **Taken:** the ontology-as-queryable-data argument, the polymorphic-query and
-identity-resolution framing, and the interactive traversal concept — expansion
-from a seed plus shortest path — which became `services/traverse.ts` and the
-Graph Traversal page.
+identity-resolution framing, and the idea of answering questions by walking
+typed relationships — now done over the governed domain (the digital thread's
+"which customers did this lot reach?").
 
 **Deliberately not taken:** its graph is a persisted `KG_NODE`/`KG_EDGE` pair
-traversed with Snowflake UDFs. Here the whole graph is 338 nodes and 281 edges,
-so traversal runs in-process; a warehouse round-trip per click would add latency
-for nothing.
+traversed with Snowflake UDFs. Here the relationships are governed in Business
+Ontology and the instance graph is small enough to walk in-process.
 
 **The important difference — do not conflate the two.** That repo models real
 supply-chain *objects*: suppliers, shipments, plants, purchase orders, contracts,
@@ -171,25 +163,22 @@ encoding reroute hours as a cost signal — are marked as such rather than attri
 
 ## Snowflake platform
 
-- **Cortex Analyst** — natural-language querying over the semantic view. Its
-  SQL-generation behaviour drove the most consequential design decision here; see
-  [findings](05-findings.md#the-semantic-view-trap).
-- **`AI_COMPLETE`** (`claude-4-sonnet`) — the scenario narrative and what-if channel.
-  Chosen over Analyst deliberately: a simulated ripple exists only in memory, so
-  Analyst would query the undisrupted network and answer the wrong question. The
-  deprecated `SNOWFLAKE.CORTEX.COMPLETE` form is not used.
-- **`cortex agent-studio` CLI** — `sv-generate`, `sv-write`, `sv-edit`,
-  `sv-deploy`. The `.sv.yaml` is never hand-edited.
-- **Snowflake semantic views** — facts, dimensions, metrics, relationships,
-  verified queries.
+- **Snowflake Business Ontology** — concepts, typed relationships and
+  representations; the source of every app input.
+- **`AI_COMPLETE`** (`claude-opus-5-5`) — the scenario narrative, the what-if
+  channel and the Ask Cortex buttons. The computed scenario and the governed
+  definitions are passed as facts; the model interprets, it does not calculate.
+  The deprecated `SNOWFLAKE.CORTEX.COMPLETE` form is not used.
+- **Dynamic tables** in `SAP_SUPPLY_CHAIN.ANALYTICS` — order fulfilment,
+  operating rate, component cover and equipment health behind the operations
+  pulse.
 
 ## Upstream data
 
+- **`SAP_SUPPLY_CHAIN`** — SAP plants, suppliers, customers, flows, capacity,
+  stock and BOMs, plus `OPS_EXT` demo enrichment for the digital thread.
 - **[SAP Business Accelerator Hub](https://api.sap.com/DataProducts)** — the
-  public catalog of BDC data products and their CSN Interop definitions. The
-  origin of every figure in this project. Mined by the parent, not by this repo.
-- **SAP One Domain Model** — the canonical objects behind the ODM overlay. In
-  this slice, `Plant` is the only one linking products.
+  public BDC catalog the domain was originally derived from (history).
 
 ---
 
@@ -197,7 +186,8 @@ encoding reroute hours as a cost signal — are marked as such rather than attri
 
 | Question | Repo |
 |---|---|
-Which SAP data products exist and how do they relate? | **this repo** (supply chain) / the parent (all 334) |
-Which supplier is late, and what is at risk? | `supplychain_ontology_agent` |
-What is my production, inventory and delivery performance? | `sap-bdc-supply-chain-360` |
-Can I show that dashboard without credentials? | `supply-chain-360-public` |
+| A supplier fails — what ripples, what can be saved, which customers did a bad lot reach? | **this repo** |
+| Which SAP data products exist and how do they relate? | the parent, `sap-bdc-data-products` |
+| Which supplier is late, and what is at risk, from an agent? | `supplychain_ontology_agent` |
+| What is my production, inventory and delivery performance? | `sap-bdc-supply-chain-360` |
+| Can I show that dashboard without credentials? | `supply-chain-360-public` |

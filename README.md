@@ -73,11 +73,11 @@ Old links to `#optimize` open Mitigation & Recovery.
 
 ## Briefing documents
 
-Two Word deliverables are generated from the running application, so their figures
-cannot drift from what it actually reports:
+Two Word deliverables are generated from `tools/facts.py`, which reads the exported
+ontology, network and thread plus the baked scenario results, so their figures
+cannot drift from what the app reports:
 
 ```bash
-npm run dev                              # the generators query the live API
 python3 tools/build_management_summary.py # executive briefing
 python3 tools/build_demo_scripts.py       # six per-persona demo scripts
 ```
@@ -92,8 +92,9 @@ by both generators so they cannot drift apart in styling.
 
 ---
 
-These generators predate the move onto Business Ontology and may quote removed
-pages; regenerate or edit before reuse.
+The same module feeds `build_project_guide.py`, `build_demo_deck.py` and
+`build_docs_docx.py` (the markdown in `docs/` as Word). Run `npm run refresh` first
+if the ontology has changed.
 
 ---
 
@@ -108,10 +109,10 @@ python3 tools/build_presales_kit.py   # three Word documents
 python3 tools/build_presales_deck.py  # ten-slide deck, screenshots from the video
 ```
 
-Both write to `~/Documents/SAP/Supply_Chain_Ontology_Presales_Kit/`. Unlike the
-briefing documents above they read `data/*.json` rather than the live API, so they
-do not need `npm run dev` running — but they are only as current as the last
-export.
+Both write to `~/Documents/SAP/Supply_Chain_Ontology_Presales_Kit/` and read
+figures from `tools/facts.py`. The kit builder also refreshes its copies of the
+management summary, demo scripts, handbook, demo deck and project guide, so run
+it last.
 
 | File | Contents |
 |---|---|
@@ -123,16 +124,14 @@ export.
 The remaining kit files are copies of existing assets: the management summary, the
 demo scripts, the documentation handbook and the narrated walkthrough video.
 
-`build_presales_deck.py` pulls four screenshots straight out
-of `Supply_Chain_Ontology_Walkthrough.mp4` with ffmpeg, cached in
-`tools/.presales_shots/`. Two consequences worth knowing:
+`build_presales_deck.py` captures five screenshots from the running app with
+Playwright (`npm run dev`; the hurricane preset is loaded through
+`sessionStorage['sc.preset']`), cached in `tools/.presales_shots/` and reused if
+the app is down.
 
-- The video is the narrated cut. The silent `_video.mp4` sibling has no audio
-  track — check with `ffprobe` before substituting it.
-- Screenshots age with the UI. The recording predates renaming *Ontology Graph* to
-  *SAP BDC Catalog* and the addition of the *Ontology Model* page, so both new
-  documents carry that caveat explicitly. Re-record before adding a fifth frame,
-  or the deck will contradict the live app.
+The narrated walkthrough (`04_Walkthrough_Narrated_4min11.mp4`) was recorded
+before the move onto Business Ontology, so it shows the earlier page layout; the
+kit documents say so. Its scenario figures still match.
 
 Check the deck renders before shipping it — a text box that overflows in
 PowerPoint is invisible in the XML:
@@ -142,7 +141,7 @@ soffice --headless --convert-to pdf 00_Presales_Overview.pptx --outdir /tmp/deck
 pdftoppm -png -r 70 /tmp/deckchk/00_Presales_Overview.pdf /tmp/deckchk/p
 ```
 
-Wide screenshots do not fit a full-width slide: at 1600×1132 a 12-inch box is
+Wide screenshots do not fit a full-width slide: at 1600×1000 a 12-inch box is
 height-bound and the image lands at barely half the available width. The picture
 slides put the screenshot in a 7.6-inch column with the KPI cards stacked beside
 it instead.
