@@ -9,17 +9,15 @@
     "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w client && npm run build -w server",
     "start": "npm run start -w server",
-    "export-data": "python3 tools/export_sc_ontology.py",
-    "deploy-views": "python3 tools/deploy_sc_views.py",
     "bake": "python3 tools/bake_static.py",
     "build:static": "cd client && VITE_STATIC=1 npx vite build --outDir dist-static",
     "preview:static": "cd client/dist-static && python3 -m http.server 8899",
-    "deploy-scenario": "python3 tools/deploy_scenario_views.py",
-    "export-network": "python3 tools/export_scenario_network.py",
+    "export-network": "python3 tools/export_ontology_network.py",
     "build-land": "python3 tools/build_land_geojson.py",
     "verify-scenario": "npm run build -w server && node tools/verify_scenario.mjs",
     "docs-word": "python3 tools/build_docs_docx.py",
-    "video": "python3 tools/video/build.py"
+    "video": "python3 tools/video/build.py",
+    "refresh": "python3 tools/refresh_all.py"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

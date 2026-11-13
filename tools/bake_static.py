@@ -6,8 +6,8 @@ it can show has to be baked ahead of time. This walks the endpoints the client
 calls and writes one JSON file per call, using the same filename rule the client
 applies in static mode:
 
-    /products                -> products.json
-    /graph?processes=D2O     -> graph__processes=D2O.json
+    /bo/summary              -> bo_summary.json
+    /bo/node/Plant           -> bo_node_Plant.json
 
 Anything not baked here will surface in the UI as "not in this snapshot" rather
 than a blank page, so the set below is the contract for what the public build
@@ -32,8 +32,6 @@ OUT = pathlib.Path(__file__).resolve().parent.parent / "client" / "public" / "da
 # Traversal is baked per seed, so the public build offers expansion from the
 # most-connected entities only. Shortest path is not baked: it is O(n^2) pairs
 # and the client disables the control in static mode.
-HUB_COUNT = 24
-TRAVERSE_DEPTHS = (1, 2, 3)
 
 
 def fetch(path: str):
@@ -100,34 +98,19 @@ def main() -> None:
         old.unlink()
 
     total = 0
-    paths = ["/meta", "/products", "/processes", "/coverage", "/scorecard",
-             "/correlation", "/insight-apps", "/semantic-roles", "/lenses",
-             "/demo", "/topology", "/ask/status", "/ask/examples",
-             f"/hubs?limit={HUB_COUNT}", "/hubs?limit=30",
-             "/entities?q=&limit=400", "/entities?q=&limit=300", "/graph",
+    paths = ["/meta",
              # the scenario pages need the network and the preset list
              "/scenario/network", "/scenario/presets", "/scenario/reasoning/status",
-             # the ontology model page: schema plus one graph per toggle position
-             "/ontology/schema",
-             "/ontology/class-graph?mode=both",
-             "/ontology/class-graph?mode=abstract",
-             "/ontology/class-graph?mode=concrete",
-             # Snowflake Business Ontology, the governed layer of the same model
+             # the governed Supply Chain domain in Snowflake Business Ontology
              "/bo/summary", "/bo/graph"]
 
-    # one snapshot per ontology class, for the detail panel. Driven off the
-    # schema rather than a hardcoded list so a new class is picked up
-    # automatically on the next bake.
-    classes = []
-    try:
-        classes = [c["name"] for c in fetch("/ontology/schema")["classes"]]
-        paths += [f"/ontology/class/{urllib.parse.quote(n)}" for n in classes]
-    except urllib.error.HTTPError as e:
-        print(f"  SKIP  ontology class snapshots -> HTTP {e.code}")
-
-    # one graph per process, matching the sidebar's single-process filters
-    procs = [p["code"] for p in fetch("/processes")]
-    paths += [f"/graph?processes={c}" for c in procs]
+    # one snapshot per governed concept, for the Ontology page's detail panel.
+    # Driven off the domain rather than a hardcoded list, so a concept a steward
+    # adds is picked up on the next bake.
+    graph = fetch("/bo/graph")
+    concepts = [e["data"]["boName"] for e in graph["elements"] if e["data"].get("kind") == "class"]
+    classes = [e["data"]["name"] for e in graph["elements"] if e["data"].get("kind") == "class"]  # appClass keys
+    paths += [f"/bo/node/{urllib.parse.quote(n)}" for n in concepts]
 
     for p in paths:
         try:
@@ -135,19 +118,6 @@ def main() -> None:
             print(f"  baked {name(p)}")
         except urllib.error.HTTPError as e:
             print(f"  SKIP  {name(p)} -> HTTP {e.code}")
-
-    # traversal snapshots from the hub set
-    hubs = fetch(f"/hubs?limit={HUB_COUNT}")
-    n = 0
-    for h in hubs:
-        for d in TRAVERSE_DEPTHS:
-            q = urllib.parse.urlencode({"seed": h["id"], "depth": d, "limit": 60})
-            try:
-                total += bake(f"/traverse?{q}")
-                n += 1
-            except urllib.error.HTTPError as e:
-                print(f"  SKIP  traverse {h['label']} d{d} -> HTTP {e.code}")
-    print(f"  baked {n} traversal snapshots from {len(hubs)} hubs")
 
     # Scenario results come from POST /scenario/simulate, which a static site cannot
     # call. Bake one result per preset instead, keyed by a signature of the
@@ -226,21 +196,6 @@ def main() -> None:
     (OUT / "scenario_reasoning_status.json").write_text(json.dumps(
         {"ok": False, "missing": ["public build has no Snowflake connection"]}))
     print("  overrode scenario_reasoning_status.json")
-
-    # ask/status is rewritten so the public build reports Ask as unavailable
-    # rather than advertising a semantic view nobody can reach
-    (OUT / "ask_status.json").write_text(json.dumps(
-        {"ok": False, "missing": ["public build has no Snowflake connection"],
-         "semantic_view": ""}))
-    print("  overrode ask_status.json for the public build")
-
-    # demo.json carries the semantic view FQN for the on-screen scope note. In a
-    # public build Ask is disabled, so naming the object is useless to the reader
-    # and publishes an internal database path for no benefit.
-    demo = json.loads((OUT / "demo.json").read_text())
-    demo["semanticView"] = ""
-    (OUT / "demo.json").write_text(json.dumps(demo))
-    print("  stripped semanticView from demo.json")
 
     files = sorted(OUT.glob("*.json"))
     print(f"\n  {len(files)} files, {total / 1048576:.2f} MB total")

@@ -68,3 +68,13 @@ export function asOfDate(iso?: string | null): string | null {
   const d = new Date(iso);
   return isNaN(d.getTime()) ? null : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
+
+/** One line at the top of a page saying which governed concepts it walks. */
+export function BuiltOn({ walks }: { walks: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2 text-[11.5px] text-slate-600">
+      <SourceBadge source="native" />
+      <span>{walks}</span>
+    </div>
+  );
+}

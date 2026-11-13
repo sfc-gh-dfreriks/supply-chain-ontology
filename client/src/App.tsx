@@ -4,45 +4,33 @@ import { useQuery } from "./hooks/useQuery";
 import { api } from "./lib/api";
 import Overview from "./pages/Overview";
 import OntologyModel from "./pages/OntologyModel";
-import Graph from "./pages/Graph";
-import Processes from "./pages/Processes";
-import UseCases from "./pages/UseCases";
-import Correlation from "./pages/Correlation";
-import Coverage from "./pages/Coverage";
-import Ask from "./pages/Ask";
-import Traverse from "./pages/Traverse";
 import Demo from "./pages/Demo";
 import ScenarioStudio from "./pages/ScenarioStudio";
 import RippleMap from "./pages/RippleMap";
 import OptimizeMap from "./pages/OptimizeMap";
 import Mitigation from "./pages/Mitigation";
 import DigitalThread from "./pages/DigitalThread";
-import { AskCortex } from "./components/AskCortex";
 import { OperationsPulse } from "./components/OperationsPulse";
 
 const TITLES: Record<PageId, string> = {
   overview: "Executive Dashboard",
-  model: "Ontology Model — classes and relations",
-  graph: "SAP BDC Catalog — data products and CDS entities",
-  traverse: "Graph Traversal",
-  processes: "Business-Process Ontology",
-  usecases: "Use Cases / Intelligent Applications",
-  correlation: "Process Correlation",
-  coverage: "Coverage & Scorecard",
-  ask: "Ask Cortex",
+  model: "Ontology — the governed Supply Chain domain",
   demo: "Guided Demo",
   scenario: "Scenario Studio",
   ripple: "Ripple Map — geography and topology",
-  mitigation: "Mitigation Plan",
-  optimize: "Optimization Map — the recovery, step by step",
-  thread: "Digital Thread — orders, systems, lots and tools in the graph",
+  mitigation: "Mitigation & Recovery",
+  thread: "Digital Thread — orders, systems, lots and tools",
 };
 
 const PAGE_IDS = Object.keys(TITLES) as PageId[];
 
+// Old links keep working: the recovery map now lives on the Mitigation page.
+const ALIASES: Record<string, PageId> = { optimize: "mitigation" };
+
 /** Read the page from the URL hash, falling back to overview for anything unknown. */
 function pageFromHash(): PageId {
   const h = window.location.hash.replace(/^#\/?/, "");
+  if (ALIASES[h]) return ALIASES[h];
   return PAGE_IDS.includes(h as PageId) ? (h as PageId) : "overview";
 }
 
@@ -71,31 +59,25 @@ export default function App() {
         <Overview /></>);
       case "thread": return <DigitalThread />;
       case "model": return <OntologyModel />;
-      case "graph": return <Graph />;
-      case "traverse": return <Traverse />;
-      case "processes": return <Processes />;
-      case "usecases": return <UseCases />;
-      case "correlation": return <Correlation />;
-      case "coverage": return <Coverage />;
-      case "ask": return <Ask />;
       case "demo": return <Demo onNavigate={setPage} />;
       case "scenario": return <ScenarioStudio />;
       case "ripple": return <RippleMap />;
-      case "mitigation": return <Mitigation />;
-      case "optimize": return <OptimizeMap />;
+      case "mitigation": return (<>
+        <OptimizeMap />
+        <div className="mt-6"><Mitigation /></div></>);
     }
   };
 
   return (
     <div className="flex h-full">
       <Sidebar active={page} onNavigate={setPage}
-        products={meta.data?.totals.products ?? 0}
-        entities={meta.data?.totals.entities ?? 0} />
+        concepts={meta.data?.ontology.available ? meta.data.ontology.counts.nodes : 0}
+        domain={meta.data?.ontology.available ? meta.data.ontology.domain : "Supply Chain"} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex items-center gap-3 border-b border-gray-200 bg-white px-6 py-3">
           <h1 className="text-lg font-bold text-slate-800">{TITLES[page]}</h1>
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-            SAP BDC supply-chain slice
+            built on Snowflake Business Ontology
           </span>
           {meta.error && <span className="ml-auto text-xs text-rose-500">{meta.error}</span>}
         </header>

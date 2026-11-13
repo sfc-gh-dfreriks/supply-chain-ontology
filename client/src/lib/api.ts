@@ -38,40 +38,6 @@ async function get<T>(pathname: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export interface ProcessDef { code: string; name: string; color: string; products: number; }
-export interface RoleDef { role: string; label: string; color: string; count: number; pct: number; }
-export interface Meta {
-  processes: ProcessDef[];
-  lobs: string[];
-  industries: string[];
-  sources: string[];
-  provenance: string[];
-  roles: RoleDef[];
-  role_label: Record<string, string>;
-  role_color: Record<string, string>;
-  totals: { products: number; mapped: number; entities: number; associations: number; cross_products: number; odm_links: number };
-  overall: number;
-}
-export interface GraphOpts {
-  processes?: string[]; lob?: string; search?: string; expand?: string | null; cross?: boolean;
-  industry?: string; source?: string; provenance?: string;
-}
-export interface ProductRow { tech: string; label: string; process: string; entity_count: number; }
-
-function gq(o: GraphOpts): string {
-  const p = new URLSearchParams();
-  if (o.processes && o.processes.length) p.set("processes", o.processes.join(","));
-  if (o.lob && o.lob !== "All") p.set("lob", o.lob);
-  if (o.industry && o.industry !== "All") p.set("industry", o.industry);
-  if (o.source && o.source !== "All") p.set("source", o.source);
-  if (o.provenance && o.provenance !== "All") p.set("provenance", o.provenance);
-  if (o.search) p.set("search", o.search);
-  if (o.expand) p.set("expand", o.expand);
-  if (o.cross === false) p.set("cross", "false");
-  const s = p.toString();
-  return s ? `?${s}` : "";
-}
-
 /**
  * Filename for a baked simulate result. Must stay identical to sim_name() in
  * tools/bake_static.py — built from the disruption's fields rather than a hash so
@@ -108,58 +74,6 @@ async function post<T>(pathname: string, body: unknown): Promise<T> {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
   return res.json() as Promise<T>;
 }
-
-export interface AskTurn { role: "user" | "analyst"; text: string; }
-export interface AskResult {
-  answer: string;
-  sql: string | null;
-  columns: string[];
-  rows: unknown[][];
-  suggestions: string[];
-  rowCount: number;
-  truncated: boolean;
-}
-export interface AskStatus { ok: boolean; missing: string[]; semantic_view: string; }
-
-
-export interface TraverseNode {
-  id: string; label: string; product: string; productLabel: string;
-  process: string; role: string; elements: number; depth: number;
-}
-export interface TraverseEdge { source: string; target: string; crossProduct: boolean; }
-export interface TraverseResult {
-  seed: string; depth: number; nodes: TraverseNode[]; edges: TraverseEdge[];
-  truncated: boolean; reachable: number;
-}
-export interface PathResult {
-  from: string; to: string; hops: number | null;
-  path: TraverseNode[]; edges: TraverseEdge[];
-  crossesProducts?: number; reason?: string;
-}
-export interface HubRow extends TraverseNode { degree: number; }
-export interface EntityRow {
-  id: string; label: string; name: string; product: string;
-  productLabel: string; role: string; elements: number;
-}
-export interface DemoInfo {
-  stats: { products: number; entities: number; associations: number;
-           crossProduct: number; linkedPairs: number; processes: number; odmLinks: number;
-           scorecard: number | null };
-  scope: { rule: string; parent_products: number; parent_entities: number } | null;
-  semanticView: string;
-}
-
-export interface Topology {
-  entities: { total: number; connected: number; isolated: number; components: number;
-              largestComponent: number; componentSizes: number[];
-              crossProductEdges: number; totalEdges: number };
-  products: { total: number; inOdmGraph: number;
-              hubs: { tech: string; label: string; degree: number }[];
-              canonicalObjects: { canonical: string; links: number }[] };
-}
-
-
-// ---- scenario modelling ----------------------------------------------------
 
 export type DisruptionKind = "weather" | "supplier" | "capacity" | "lane" | "demand";
 
@@ -260,57 +174,6 @@ export interface MitigationPlan {
 export interface SimulateResponse { result: ScenarioResult; plan: MitigationPlan; }
 export interface Preset extends Disruption { id: string; blurb: string; source?: string; }
 
-// ---- ontology schema: the CLASS layer -------------------------------------
-// Mirrors server/src/services/ontologySchema.ts. Distinct from the BDC catalog
-// types above: those describe what data exists, these describe what kinds of
-// thing exist.
-export type ClassMode = "abstract" | "concrete" | "both";
-
-export interface ClassSource {
-  database: string; schema: string; table: string;
-  filter_col: string | null; filter_val: string | null;
-}
-export interface OntClass {
-  name: string;
-  parent: string | null;
-  is_abstract: boolean;
-  description: string | null;
-  depth: number | null;
-  descendants: number | null;
-  instances: number;
-  source: ClassSource | null;
-}
-export interface OntRelation {
-  name: string;
-  domain: string;
-  range: string;
-  cardinality: string | null;
-  is_hierarchical: boolean;
-  is_transitive: boolean;
-  inverse: string | null;
-  description: string | null;
-  is_stored: boolean;
-  is_inferred: boolean;
-  is_abstract: boolean;
-  rule: { id: string; kind: string; enabled: boolean; edges: number } | null;
-}
-export interface AbstractRollup {
-  view: string;
-  total: number;
-  breakdown: { type: string; count: number }[];
-}
-export interface StackLayer {
-  layer: string; name: string; detail: string; note: string; objects: number;
-}
-export interface OntologySchema {
-  ontology: string;
-  source: string;
-  stack: StackLayer[];
-  counts: Record<string, number>;
-  classes: OntClass[];
-  relations: OntRelation[];
-  abstract_rollup: Record<string, AbstractRollup>;
-}
 // ---- Snowflake Business Ontology: the GOVERNED layer ----------------------
 // Mirrors server/src/services/businessOntology.ts. Kept as its own types so a
 // component always knows whether a field is native or from the app model.
@@ -329,58 +192,19 @@ export type BoSummary =
       counts: { nodes: number; relationships: number; representations: number };
       kinds: Record<string, number>; relationshipTypes: Record<string, number> };
 
-export interface ClassDetail {
-  /** the governed node for this class; null for Entity, the app's technical root */
-  native?: BoNode | null;
-  nativeAvailable?: boolean;
-  cls: OntClass;
-  children: OntClass[];
-  ancestors: { ancestor: string; depth: number }[];
-  descendants: { descendant: string; depth: number; path: string }[];
-  properties: { name: string; type: string; required: boolean }[];
-  relations_out: OntRelation[];
-  relations_in: OntRelation[];
-  rollup: AbstractRollup | null;
+export interface Meta {
+  ontology: BoSummary;
+  network: ScNetwork["totals"];
+  networkSource: string;
+  /** which governed concept, and which of its representations, each input came from */
+  lineage: Record<string, Record<string, string> | Record<string, unknown>> | null;
 }
 
 export const api = {
   meta: () => get<Meta>("/meta"),
-  graph: (o: GraphOpts) => get<{ elements: any[] }>(`/graph${gq(o)}`),
-
-  // ---- ontology schema (the class layer) --------------------------------
-  ontologySchema: () => get<OntologySchema>("/ontology/schema"),
-  classGraph: (mode: ClassMode) =>
-    get<{ mode: ClassMode; elements: any[]; counts: Record<string, number> }>(
-      `/ontology/class-graph?mode=${mode}`,
-    ),
-  classDetail: (name: string) =>
-    get<ClassDetail>(`/ontology/class/${encodeURIComponent(name)}`),
-
-  // ---- Snowflake Business Ontology (the governed layer) ------------------
   boSummary: () => get<BoSummary>("/bo/summary"),
   boGraph: () => get<{ elements: any[]; counts: Record<string, number>; exportedAt: string }>("/bo/graph"),
-
-  products: (o: GraphOpts) => get<ProductRow[]>(`/products${gq({ ...o, expand: null, cross: undefined })}`),
-  processes: () => get<any[]>("/processes"),
-  correlation: () => get<any>("/correlation"),
-  scorecard: () => get<any>("/scorecard"),
-  coverage: () => get<any>("/coverage"),
-  insightApps: () => get<any[]>("/insight-apps"),
-  semanticRoles: () => get<any>("/semantic-roles"),
-  lenses: () => get<any>("/lenses"),
-  askStatus: () => get<AskStatus>("/ask/status"),
-  askExamples: () => get<string[]>("/ask/examples"),
-  ask: (history: AskTurn[], view = "catalog") => post<AskResult>("/ask", { history, view }),
-  askViews: () => get<{ key: string; name: string; label: string }[]>("/ask/views"),
-  hubs: (limit = 25) => get<HubRow[]>(`/hubs?limit=${limit}`),
-  entities: (q = "", limit = 400) =>
-    get<EntityRow[]>(`/entities?q=${encodeURIComponent(q)}&limit=${limit}`),
-  traverse: (seed: string, depth = 1, limit = 60) =>
-    get<TraverseResult>(`/traverse?seed=${encodeURIComponent(seed)}&depth=${depth}&limit=${limit}`),
-  path: (from: string, to: string) =>
-    get<PathResult>(`/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
-  demo: () => get<DemoInfo>("/demo"),
-  topology: () => get<Topology>("/topology"),
+  boNode: (name: string) => get<BoNode>(`/bo/node/${encodeURIComponent(name)}`),
 
   scNetwork: () => get<ScNetwork>("/scenario/network"),
   scPresets: () => get<Preset[]>("/scenario/presets"),

@@ -8,12 +8,10 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { runSql } from "./analyst.js";
+import { runSql } from "./snowflake.js";
 import { loadNetwork, simulate, type Disruption } from "./scenario.js";
 import { mitigate } from "./mitigate.js";
-import { loadSchema, classDetail } from "./ontologySchema.js";
 import { loadBusinessOntology, boNodeFor } from "./businessOntology.js";
-import { traverse } from "./traverse.js";
 
 const MODEL = process.env.SCENARIO_LLM_MODEL ?? "claude-opus-5-5";
 let _t: any = null;
@@ -62,14 +60,14 @@ export function serialTrace(serial: string) {
 
 // ------------------------------------------------------------- Ask Cortex
 const SYSTEM = `You are Snowflake Cortex, a supply-chain ontology analyst for a semiconductor inspection-equipment
-maker (plants San Jose, Austin, Dresden, Singapore, Penang). The facts below were produced by traversing
-a knowledge graph built from SAP Business Data Cloud data products plus demo enrichment (orders, tools,
-component lots). Treat them as authoritative; never invent numbers. Lead with the direct answer, then
-evidence (a small markdown table when comparing), then 2-4 concrete actions. Name the relationships you
-followed (e.g. ComponentLot -usedIn-> SystemSerial -shippedOn-> SalesOrder -placedBy-> Customer).
-When the facts include governed_definition_snowflake_business_ontology, take the concept's meaning from it
-and say "governed definition (Snowflake Business Ontology)"; take abstract flags, properties, cardinality and
-rules from operational_model_app and say "app model". Under 300 words.`;
+maker (plants San Jose, Austin, Dresden, Singapore, Penang). The facts below were produced by walking
+the governed relationships of the Snowflake Business Ontology "Supply Chain" domain and reading the data
+each concept represents (SAP master data plus demo enrichment for orders, tools and component lots). Treat them as authoritative; never invent numbers. Lead with the direct answer, then
+evidence (a small markdown table when comparing), then 2-4 concrete actions. Name the governed relationships you
+followed (e.g. System Serial -has part-> Component Lot, System Serial -shipped on-> Sales Order -placed by-> Customer).
+Concepts and relationships are governed in Snowflake Business Ontology (domain "Supply Chain"); when the facts
+include governed_definition_snowflake_business_ontology, take the concept's meaning from it and say "governed
+definition (Snowflake Business Ontology)". Under 300 words.`;
 
 function factsFor(topic: string, args: Record<string, any>): unknown {
   const t = loadThread();
@@ -97,20 +95,14 @@ function factsFor(topic: string, args: Record<string, any>): unknown {
     case "overview": return { operations: operations(), thread: threadSummary().kpi, network: loadNetwork().totals };
     case "class": {
       const name = String(args.class);
-      const detail = (() => { try { return classDetail(loadSchema(), name); } catch { return null; } })();
       const gov = boNodeFor(loadBusinessOntology(), name);
-      // Two sources, labelled so the answer can say which it used: the governed
-      // definition from Snowflake Business Ontology, and the app's operational model.
+      // The governed concept, plus how many instances its representation holds.
       return { class: name,
                governed_definition_snowflake_business_ontology: gov
                  ? { node: gov.fqn, status: gov.status, definition: gov.description, relationships: gov.edges, representations: gov.representations }
                  : null,
-               operational_model_app: detail, schema_summary: (loadSchema() as any).summary ?? null,
-               instances_from_operations: loadThread().classes.find((c: any) => c.class_name === name) ?? null };
-    }
-    case "neighbourhood": {
-      const r = traverse(String(args.start), Number(args.depth ?? 2)) as any;
-      return { start: args.start, nodes: (r.nodes ?? []).slice(0, 60), edges: (r.edges ?? []).slice(0, 120) };
+               instances: loadThread().classes.find((c: any) => c.class_name === (gov?.name ?? name)) ?? null,
+               network: loadNetwork().totals };
     }
     default: throw new Error(`unknown topic ${topic}`);
   }

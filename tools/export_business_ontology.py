@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
 """Export the Snowflake Business Ontology "Supply Chain" domain to data/sc_business_ontology.json.
 
-The app now shows two kinds of ontology, and keeps them visibly apart:
+This is what the Ontology page and the Ask Cortex explanations show: approved
+definitions, synonyms, typed relationships, representations (concept ->
+Snowflake object) and change history. The scenario network and the digital
+thread are built from the same domain by export_ontology_network.py and
+export_ops_thread.py.
 
-  Snowflake Business Ontology (this file)  governed MEANING: approved definitions,
-                                           synonyms, typed relationships between
-                                           concepts, representations (concept ->
-                                           Snowflake object) and change history.
-  App ontology (sc_ontology_schema.json)   the OPERATIONAL model: abstract flags,
-                                           typed properties, cardinality, the
-                                           substitution rule, class -> table maps
-                                           and instance counts. Business Ontology
-                                           has no field for any of these.
-
-The domain was published from SAP_SUPPLY_CHAIN.ONTOLOGY, so each native node maps
-back to an app class. The map is built from the node's synonyms (the app class
-name was stored as a synonym where it differs) and falls back to the name with
-spaces removed.
+`appClass` is each concept's name without spaces (or its no-space synonym),
+used as a stable key in the app.
 
 Read-only: only SYSTEM$GET_GLOSSARY_* calls. Exported rather than queried live
 because tools/bake_static.py builds a credential-free static site.
@@ -32,7 +24,7 @@ import sys
 import snowflake.connector
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from export_ontology_schema import conn_params  # noqa: E402
+from sf_conn import conn_params  # noqa: E402
 
 DOMAIN = "Supply Chain"
 ACCOUNT_URL = "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2"

@@ -40,7 +40,8 @@ interface StepDef {
 const STEPS: StepDef[] = [
   { id: "network", kicker: "Step 1", title: "Start with the network you actually run",
     why: "Everything downstream is only as credible as this. Five plants, six suppliers, "
-       + "eight customers, read from SAP data in Snowflake — not a diagram someone drew.",
+       + "eight customers, found by walking the governed Supply Chain domain in Snowflake "
+       + "Business Ontology and reading the SAP data each concept represents.",
     page: "scenario", pageLabel: "Scenario Studio", goLabel: "Open Scenario Studio" },
   { id: "pick", kicker: "Step 2", title: "Choose the disruption",
     why: "Six scenarios ship ready to run, and you can build your own from five event "

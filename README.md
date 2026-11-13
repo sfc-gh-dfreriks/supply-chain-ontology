@@ -1,43 +1,37 @@
 # Supply Chain Ontology
 
-An ontology explorer for the **supply-chain slice of the SAP Business Data Cloud
-catalog** — 36 data products, 338 CDS entities and 281 declared associations
-across Design to Operate, Source to Pay and Lead to Cash. Explore the graph,
-traverse associations, review coverage, and ask questions in natural language
-through Cortex Analyst.
-
-Derived from the full BDC Ontology Explorer (334 products) and focused for
-supply chain. Foundation material: the ontology-agent pattern from
-[`sfc-gh-tjia/supplychain_ontology_agent`](https://github.com/sfc-gh-tjia/supplychain_ontology_agent),
-the app and publishing patterns from
-[`sap-bdc-supply-chain-360`](https://github.com/sfc-gh-dfreriks/sap-bdc-supply-chain-360)
-and [`supply-chain-360-public`](https://github.com/sfc-gh-dfreriks/supply-chain-360-public),
-and the AI309 Summit narrative.
+A supply-chain disruption and traceability app **built on Snowflake Business
+Ontology**. Every page runs on the governed "Supply Chain" domain: 21 concepts,
+26 typed relationships and 25 representations linking each concept to the
+Snowflake objects that hold its data. Model a supplier failure or a plant
+outage, watch it ripple through the network, plan the recovery inside real
+capacity, and trace a bad component lot to the customers it reached.
 
 ---
 
-## What this is, and what it is not
+## How it is built on the ontology
 
-Two things live here, and keeping them apart is the point.
+Nothing in the app names a table. Each input is found by walking the governed
+domain, then read from the representation a steward linked to that concept:
 
-**The ontology** — 15 classes and 11 relations in `SAP_SUPPLY_CHAIN.ONTOLOGY`.
-This is the model: what *kinds* of thing exist and how they relate. Five classes
-are abstract, which is what lets one query span several concrete types — asking
-for parties returns all 8 customers and 6 suppliers together. See
-[docs/08-ontology-layer.md](docs/08-ontology-layer.md).
+| App input | Found by walking | Concept → representation |
+|---|---|---|
+| Suppliers, plants, customers | endpoints of **supplies** and **ships to** | Supplier, Plant, Customer → `VW_ONT_*` |
+| Material flows | the kinds (IS_A) of the concept **Material Category classifies** | Inbound / Outbound / Inter Plant Flow → `VW_ONT_*` |
+| Capacity and inventory buffers | Plant properties | Plant → `VW_ONT_PLANT` |
+| Substitution (who can make what) | Material Category, **produced by** Plant | Material Category → `ONTOLOGY.V_PRODUCES` |
+| Order economics | Sales Order, **fulfilled by** Plant | Sales Order → `ANALYTICS.DT_ORDER_FULFILLMENT` |
+| Digital thread | System Serial **has part** Component Lot, **shipped on** Sales Order, **placed by** Customer | Component Lot → `VW_ONT_LOT_BLAST_RADIUS`, plus class views |
+| Operations pulse | Plant and Equipment facts | Plant → `DT_OPERATING_RATE`, `DT_COMPONENT_COVER`; Equipment → `DT_EQUIPMENT_HEALTH`, `A_WORK_CENTER` |
 
-**The SAP BDC catalog** — 10 processes, 334 data products, 2,243 CDS entities.
-This is metadata about *what data exists*: which entities are published, how they
-are annotated, how they associate.
+Change a relationship or representation in Snowflake and the next refresh reads
+from the new place. The rewrite was gated on parity: all nine scenario presets
+and the full digital thread produce identical results to the previous,
+table-driven version.
 
-Neither is transactional supply chain data — there are no shipments, inventory
-levels or purchase orders in the catalog half. The scenario engine does carry a
-19-node network with real capacity and inventory for disruption modelling; for
-production supply-chain analytics see the SAP Supply Chain 360 app.
-
-The app previously called the catalog "the ontology". It is not one: a catalog
-cannot express that a Supplier and a Customer are both Parties, so it cannot
-answer "which parties are affected" in a single pass.
+What Business Ontology does not model, and so stays in the scenario engine's
+code: plant-to-plant transfer as an edge type, cardinality, the substitution
+rule (same category plus spare hours) and buffer timing.
 
 ---
 
@@ -45,20 +39,16 @@ answer "which parties are affected" in a single pass.
 
 ```bash
 npm install
-npm run export-data      # build data/sc_ontology.json from the BDC catalog
-npm run deploy-views     # create the Snowflake views + verify parity (optional)
 npm run dev              # server :3009, client :5179
 ```
 
-Open <http://localhost:5179>.
-
-Cortex Analyst needs `server/.env`:
+Open <http://localhost:5179>. The pages read exported JSON, so they run with no
+connection. Ask Cortex (AI_COMPLETE, `claude-opus-5-5`) needs `server/.env`:
 
 ```
 SNOWFLAKE_ACCOUNT=…
 SNOWFLAKE_USER=…
 SNOWFLAKE_PRIVATE_KEY_PATH=…
-BDC_SEMANTIC_VIEW=SAP_BDC_ONTOLOGY.SUPPLY_CHAIN.SUPPLY_CHAIN_ONTOLOGY_MODEL
 PORT=3009
 ```
 
@@ -68,23 +58,16 @@ PORT=3009
 
 | Page | What it shows |
 |---|---|
-| **Ask Cortex** | Page 1. Cortex Analyst over the supply-chain semantic view (formerly "Ask the Ontology") |
-| Executive Dashboard | The ontology stack and catalog totals, lenses by source system, industry and provenance |
-| **Ontology Model** | The 15 classes and 11 relations as a left-to-right tree, each node stating its instance count. Abstract/Concrete/Both toggle — *Concrete* deliberately shows ten disconnected classes, because stripping the abstract layer leaves nothing joining a Supplier to a Customer. Relations are off by default and marked stored, inferred or abstract; selecting an abstract class shows the breakdown that proves the abstraction |
-| SAP BDC Catalog | Process → data product → entity, filterable and expandable. Labels sit below the circles, since a 30-character entity name cannot fit inside an 18px node. Renamed from "Ontology Graph": it is a catalog, not an ontology |
-| Graph Traversal | Breadth-first expansion and shortest association path |
-| Business Processes | Per-process rollups and members |
-| Use Cases | Mapping to BDC Intelligent Applications |
-| Correlation | Process coupling via the ODM master-data overlay |
-| Coverage & Scorecard | Readiness scoring across the slice |
-| Guided Demo | Seven-step walkthrough of the hurricane scenario, with click targets pinned on live components |
+| **Executive Dashboard** | Operations pulse (OTIF, late cost, operating rate, tool risk, component cover per plant), the governed domain, and the network the scenarios run on |
+| **Ontology** | The governed Supply Chain domain: graph, each concept's definition, relationships, representations and change history (with a link to Snowsight), and the table of what the app reads through it |
 | **Scenario Studio** | Build a disruption from five event types; results bucketed by the response each needs |
-| **Ripple Map** | Geography and topology side by side, selection synced, cascade played one lane at a time with the camera following each beat. A deliberate zoom on the topology panel is preserved across beats, with a **Reset view** control to refit. Each beat carries a subtitle, popout KPI cards showing what changed, and an "explain this step" popover with the arithmetic |
-| **Mitigation** | Reroutes inside real capacity, what cannot be saved and why, plus an AI you can interrogate |
-| **Optimization Map** | The recovery as a movie: one beat per reroute, the replaced lane struck through and the new one drawn in, with the receiving plant's headroom before and after. Ends on the plant the plan leaves tightest |
-| **Digital Thread** | Customer orders, built systems (serials), component lots and production tools as ontology classes, so "which customers did this bad lot reach?" is answered by traversal. Picks a serial and walks its genealogy; flags deviating lots and tools at high 48-hour failure risk |
-| **Operations Pulse** (Overview) | OTIF, late cost, operating rate and critical component cover per plant, from the OPS_EXT demo enrichment |
-| **Ask Cortex** (most pages) | A grounded AI_COMPLETE reading of the view on screen: the server passes the traversal or scenario result to the model, so the answer cites the numbers on screen |
+| **Ripple Map** | Geography and topology side by side, the cascade played one lane at a time |
+| **Mitigation & Recovery** | The recovery as a movie, one beat per reroute, then the plan: reroutes inside real capacity, what cannot be saved and why, plus an AI you can interrogate |
+| **Digital Thread** | Orders, built systems, component lots and tools: "which customers did this bad lot reach?" answered by walking the governed relationships |
+| **Guided Demo** | Seven-step walkthrough of the hurricane scenario |
+| **Ask Cortex** (most pages) | A grounded AI_COMPLETE reading of the view on screen, citing the governed definitions |
+
+Old links to `#optimize` open Mitigation & Recovery.
 
 ---
 
@@ -106,6 +89,11 @@ python3 tools/build_demo_scripts.py       # six per-persona demo scripts
 
 Both write to `~/Documents/SAP/`. Layout helpers live in `tools/docx_kit.py`, shared
 by both generators so they cannot drift apart in styling.
+
+---
+
+These generators predate the move onto Business Ontology and may quote removed
+pages; regenerate or edit before reuse.
 
 ---
 
@@ -161,196 +149,44 @@ it instead.
 
 ---
 
-## Scope rule
-
-A data product is in scope when **either**
-
-- its business process is Design to Operate (SAP's supply-chain process), **or**
-- its line of business names Supply Chain, Manufacturing, Sourcing and
-  Procurement, or R&D Engineering.
-
-Line of business is a delimited multi-value string (`"Manufacturing,Supply Chain"`),
-so it is matched per token. Matching the whole string would drop every product
-carrying Supply Chain alongside another LOB — which is most of the interesting
-cross-functional ones.
-
-The identical rule is implemented twice, once in `tools/export_sc_ontology.py`
-for the app's JSON and once in `tools/deploy_sc_views.py` for the Snowflake
-views. `npm run deploy-views` asserts the two agree and fails if they drift,
-because otherwise Ask would answer over a different population than the pages
-display.
-
----
-
-## How the graph is actually shaped
-
-Worth knowing before demoing traversal:
-
-- **No entity association crosses a data product boundary** — all 281 stay
-  inside their own product. An entity-level shortest path can never leave the
-  product it starts in.
-- The 269 connected entities form **94 separate components**, the largest
-  holding 14. **69 entities declare no associations at all.**
-- Cross-product linkage lives one level up, in the **ODM overlay**: 20 of 36
-  products connect, entirely through the canonical object **Plant**, which sits
-  at the centre of a star with degree 19.
-
-The Graph Traversal page states this on screen rather than implying a richer
-graph than exists.
-
----
-
-## Snowflake objects
-
-Two schemas, matching the two halves described above.
-
-**The ontology** — `SAP_SUPPLY_CHAIN.ONTOLOGY`, five layers:
-
-```
-L1  KG_NODE  2,662     KG_EDGE  5,457     instances + 15 schema nodes
-L2  20 ONT_* tables                       classes, relations, properties, rules
-L3  40 views · 4 UDFs · 10 procedures     VW_ONT_* span several concrete types
-L4  SUPPLY_CHAIN_BASE                     concrete lookups
-    SUPPLY_CHAIN_ONTOLOGY_MODEL           cross-type reasoning
-    SUPPLY_CHAIN_METADATA_MODEL           governance and provenance
-L5  SUPPLY_CHAIN_AGENT                    7 tools, routes to the right layer
-```
-
-**The BDC catalog** — views over the parent ontology's `CORE` tables, no copies,
-so there is one source of truth:
-
-```
-SAP_BDC_ONTOLOGY.SUPPLY_CHAIN
-  V_PRODUCT          36    V_ENTITY_EDGE   281
-  V_ENTITY          338    V_ODM_EDGE       19
-  V_PROCESS           3    V_PROCESS_ROLLUP
-  SUPPLY_CHAIN_ONTOLOGY_MODEL   (semantic view: 17 facts, 11 metrics)
-```
-
-### Two views share the name `SUPPLY_CHAIN_ONTOLOGY_MODEL`
-
-They are different objects in different schemas, and their specs are kept apart
-by filename:
-
-| Spec file | Deploys to |
-|---|---|
-| `SUPPLY_CHAIN_ONTOLOGY_MODEL.sv.yaml` | `SAP_SUPPLY_CHAIN.ONTOLOGY` (the abstract layer) |
-| `SUPPLY_CHAIN_ONTOLOGY_MODEL_BDC.sv.yaml` | `SAP_BDC_ONTOLOGY.SUPPLY_CHAIN` (the catalog) |
-
-`sv-write --source-object` derives the workspace filename from the view name
-alone, so writing either one without an explicit `--file-path` will overwrite the
-other. Pass `--file-path` when the name is already taken.
-
-### Editing a semantic view
-
-Use the `cortex agent-studio` CLI, not a text editor:
-
-```bash
-cortex agent-studio sv-edit --file-path SUPPLY_CHAIN_ONTOLOGY_MODEL_BDC.sv.yaml \
-  --operations '[{"operation":"validate_yaml"}]'
-cortex agent-studio sv-deploy --file-path SUPPLY_CHAIN_ONTOLOGY_MODEL_BDC.sv.yaml \
-  --fqn SAP_BDC_ONTOLOGY.SUPPLY_CHAIN.SUPPLY_CHAIN_ONTOLOGY_MODEL
-```
-
-**Do not promote numeric columns to facts in this model.** Leave them as
-dimensions and expose aggregates as metrics — which is how `sv-generate`
-classifies them by default.
-
-Cortex Analyst does not query through `SEMANTIC_VIEW(...)`; it compiles the
-logical model into base-table SQL itself, and it omits fact columns from the CTE
-projection while still referencing them in the outer `SELECT`:
-
-```sql
-WITH __v_product AS (SELECT product_label FROM …V_PRODUCT)
-SELECT product_label, product_entity_count      -- not projected above
-FROM __v_product ORDER BY product_entity_count DESC
-```
-
-That fails with `invalid identifier 'PRODUCT_ENTITY_COUNT'`, even though the same
-fact resolves correctly in a hand-written `SEMANTIC_VIEW(… FACTS …)` query.
-Dimensions are always projected, so row-level numbers belong there.
-
-Two further traps found the hard way:
-
-- A fact whose **unqualified** expression names a column that exists on more than
-  one table in the model is dropped **silently** — `sv-edit` reports success and
-  the fact is simply absent. Three were lost this way. Qualifying the expression
-  (`V_PRODUCT.ENTITY_COUNT`) makes `sv-edit` accept it but produces SQL that
-  fails at run time, because the CTE is aliased `__v_product`. The fix is to make
-  the column name unique in the view — hence the `PRODUCT_` prefixes above.
-- `V_ENTITY.PROCESS_CODE` must not join to `V_PROCESS`. Entities reach their
-  process through their product; a direct join creates a second path to the same
-  dimension.
-
-Always count facts and metrics after editing, and run the example questions
-before calling it done — the model can validate and deploy clean and still fail
-every query.
-
 ---
 
 ## Public static build
 
-A credential-free snapshot for sharing, following the `supply-chain-360-public`
-pattern. `VITE_STATIC=1` makes the client read pre-baked JSON from
-`client/public/data/` instead of calling `/api`.
+A credential-free snapshot for sharing. `VITE_STATIC=1` makes the client read
+pre-baked JSON from `client/public/data/` instead of calling `/api`.
 
 ```bash
 npm run dev            # in one shell — the baker reads from the live API
-npm run bake           # writes ~280 snapshots (incl. ~80 Ask Cortex answers) to client/public/data/
+npm run bake           # snapshots, incl. one per concept and ~80 Ask Cortex answers
 npm run build:static
 npm run preview:static # http://localhost:8899
 ```
 
-Commit `client/public/data/*.json` — the Pages workflow refuses to deploy with
-fewer than 20 snapshots, since the site would otherwise build green and render
-empty.
-
-What the public build cannot do, and says so on screen:
-
-- **Ask** is disabled — Cortex Analyst needs Snowflake credentials.
-- **Ask Cortex** shows the baked default answer for each preset view, lot and
-  class; follow-up questions need the live app.
-- **Shortest path** is hidden — the pair space is quadratic; only expansion from
-  the 24 most-connected entities is baked.
-
-Snapshot filenames fold percent-escapes to `-`, because a literal `%3A` in a
-filename is decoded back to `:` by the web server and would never match the file
-on disk. The rule is implemented in both `tools/bake_static.py` and
-`client/src/lib/api.ts` and the two must stay identical.
+Commit `client/public/data/*.json`. The public build shows the baked default
+Ask Cortex answer for each preset view, lot and concept; follow-up questions and
+custom sliders need the live app.
 
 ---
 
 ## Refreshing the data
 
-Three independent artifacts, three refresh steps.
+One command, in order, and it fails loudly if anything is out of step:
 
 ```bash
-npm run export-data                       # data/sc_ontology.json   BDC catalog
-python3 tools/export_ontology_schema.py   # data/sc_ontology_schema.json  classes
-python3 tools/export_scenario_network.py  # data/sc_network.json     19 nodes
-npm run deploy-views                      # re-assert Snowflake/JSON parity
-npm run bake                              # re-snapshot for the public build
+npm run refresh        # python3 tools/refresh_all.py
 ```
 
-`export-data` reuses the parent explorer's own derivation functions
-(`ontology_builder.process_rollup`, `correlation`, `scorecard`, `insight_apps`,
-`semantic_roles`, `lens_summary`) over the filtered dictionary. Copying the
-parent's precomputed blocks instead would publish 334-product figures inside a
-36-product app.
+| Step | Tool | Output |
+|---|---|---|
+| 1 | `export_business_ontology.py` | `data/sc_business_ontology.json`: the domain |
+| 2 | `export_ontology_network.py` | `data/sc_network.json`: the scenario network, found by walking the domain |
+| 3 | `export_ops_thread.py` | `data/sc_ops_thread.json`: thread and pulse, found the same way |
+| 4–6 | build, serve, `bake_static.py` | `client/public/data/*.json` |
+| 7 | reconcile | re-walks the domain and compares with steps 2–3 |
 
-`export_ontology_schema.py` reads `SAP_SUPPLY_CHAIN.ONTOLOGY` and reports any
-mapping defect it finds — a concrete class with no physical mapping, or an
-abstract class that has one — exiting non-zero so a broken export cannot be baked
-silently. Counts come from `INFORMATION_SCHEMA`, not `SHOW`: `SHOW PROCEDURES`
-reports 43 in that schema because it includes built-ins, where the real figure
-is 10.
+`python3 tools/refresh_all.py --check` reconciles without changing anything.
+Both walking exporters also take `--check` on their own.
 
-The baker defaults to `localhost:3009` and honours `BAKE_HOST`:
-
-```bash
-BAKE_HOST=http://localhost:3011 python3 tools/bake_static.py
-```
-
-It emits 19 ontology snapshots — the schema, one per toggle position, and one per
-class. Class snapshots are driven off the schema rather than a hardcoded list, so
-a new class is picked up on the next bake.
+All three exporters are read-only: `SYSTEM$GET_GLOSSARY_*` calls and SELECTs on
+represented objects.

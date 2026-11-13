@@ -246,48 +246,48 @@ list, so a new class is picked up automatically.
 
 ---
 
-## Two ontologies: governed in Snowflake, operational in the app
+## The app is built on Snowflake Business Ontology
 
-The same concepts now live in two places, and the app shows both, always badged
-with their source:
+As of 13 Nov 2026 the app reads nothing from the `ONT_*` / `KG_*` layer described
+above. Every input is found by walking the governed "Supply Chain" domain in
+Snowflake Business Ontology (account MSB89522) and reading the representation a
+steward linked to each concept. The sections above remain as the record of how
+the domain was derived; the app itself no longer depends on them.
 
-| Badge | Source | Holds | Why it is the source |
-|---|---|---|---|
-| **Snowflake Business Ontology** | "Supply Chain" domain on MSB89522 (Snowsight → Catalog → Business Ontology) | definitions, synonyms, status, typed relationships, representations (concept → `VW_ONT_*` view), change history | governed: steward-approved, versioned, access by domain, searchable by Cortex agents |
-| **App ontology** | `SAP_SUPPLY_CHAIN.ONTOLOGY` (`ONT_*`) | abstract flags, depth, typed properties, cardinality and inverse, the substitution rule, class → table filters | Business Ontology has no field for any of these |
-| **Knowledge graph** | `KG_NODE` / `KG_EDGE` | instances, flows, buffers, capacity | data, not concepts; neither ontology stores rows |
+| App input | Walk | Representation read |
+|---|---|---|
+| Network nodes | endpoints of `supplies` and `ships to` | `VW_ONT_SUPPLIER`, `VW_ONT_PLANT`, `VW_ONT_CUSTOMER` |
+| Flows | IS_A children of the concept `Material Category` classifies | `VW_ONT_INBOUNDFLOW`, `VW_ONT_OUTBOUNDFLOW`, `VW_ONT_INTERPLANTFLOW` |
+| Capacity, inventory | Plant | `VW_ONT_PLANT` |
+| Substitution | Material Category | `V_PRODUCES` |
+| Economics | Sales Order fulfilled by Plant | `ANALYTICS.DT_ORDER_FULFILLMENT` |
+| Digital thread | System Serial has part Component Lot, shipped on Sales Order | `VW_ONT_LOT_BLAST_RADIUS` + class views |
+| Operations pulse | Plant, Equipment | `DT_OPERATING_RATE`, `DT_COMPONENT_COVER`, `DT_EQUIPMENT_HEALTH`, `A_WORK_CENTER` |
 
-Where the native layer replaces app content:
-
-- **Ontology Model page.** The graph defaults to *Snowflake Business Ontology*
-  (21 nodes, 26 relationships, laid out around Plant); *App class model* shows
-  the original tree with abstract/concrete modes. The class panel opens with the
-  governed definition, relationships, representations and history, then the
-  operational model below it. Entity, the app's technical root, has no native
-  node and says so. The relations table gains an *In Business Ontology* column.
-- **Executive Dashboard.** The ontology card shows native counts above the app
-  model counts.
-- **Ask Cortex (class).** The prompt carries both, labelled, and answers name
-  which one each statement came from.
-
-Unchanged: the scenario, ripple, mitigation, optimisation, traversal, catalog
-and digital-thread pages run on instance data and the app model.
-
-The app reads a snapshot, not the live service, for the same static-site reason:
+Seven representations were added to the domain for this (Material Category,
+Sales Order, Component Lot, two on Plant, two on Equipment), each through the
+quality gate with 0 findings, bringing it to 25.
 
 ```
-tools/export_business_ontology.py  ->  data/sc_business_ontology.json   (read-only SYSTEM$GET_GLOSSARY_* calls)
-                                       server/src/services/businessOntology.ts
-                                       GET /api/bo/summary · /api/bo/graph
-                                       GET /api/ontology/class/:name  (adds `native`)
+tools/export_business_ontology.py  ->  data/sc_business_ontology.json   the domain
+tools/export_ontology_network.py   ->  data/sc_network.json             walk -> scenario network
+tools/export_ops_thread.py         ->  data/sc_ops_thread.json          walk -> thread and pulse
+tools/refresh_all.py                   all three, bake, then reconcile (re-walk and compare)
 ```
 
-Refresh after a steward changes the domain, then re-bake:
+**Parity.** The switch was gated on identical output: the network export
+matched the old `SCENARIO`-schema export field for field; all nine presets gave
+identical totals, flows and mitigation plans; the thread matched on serials,
+traces, lots, equipment and the operations pulse (two lists had undefined order
+before and are now sorted).
 
-```bash
-python3 tools/export_business_ontology.py
-BAKE_HOST=http://localhost:3009 python3 tools/bake_static.py
-```
+**Removed with the catalog:** SAP BDC Catalog, Graph Traversal, Business
+Processes, Use Cases, Correlation, Coverage & Scorecard, the Cortex Analyst page,
+and the app class model view; `export_sc_ontology.py`,
+`export_ontology_schema.py`, `export_scenario_network.py`, `deploy_sc_views.py`.
+
+**Not in Business Ontology**, and so in the engine's code: plant-to-plant
+transfer as an edge, cardinality, the substitution rule and buffer timing.
 
 ---
 

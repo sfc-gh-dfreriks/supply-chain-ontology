@@ -6,6 +6,7 @@ import { useNetwork, useScenario, useScenarioMaps } from "../hooks/useScenario";
 import { money } from "../lib/severity";
 import { buildMitSteps } from "../lib/mitsteps";
 import { AskCortex } from "../components/AskCortex";
+import { BuiltOn } from "../components/SourceBadge";
 
 /**
  * Optimization Map — the recovery played as a movie.
@@ -82,6 +83,7 @@ export default function OptimizeMap() {
 
   return (
     <div className="space-y-4">
+      <BuiltOn walks="Reroutes go to a Plant that produces the same Material Category and has spare hours. Margin comes from Sales Order, fulfilled by Plant." />
       {disruption && (
         <div className="flex justify-end">
           <AskCortex topic="optimize" args={{ disruption }} label="Ask Cortex: is this the best recovery sequence?"

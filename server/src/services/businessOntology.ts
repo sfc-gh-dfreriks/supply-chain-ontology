@@ -3,16 +3,11 @@
  *
  * The app shows two ontologies and keeps them visibly apart:
  *
- *   businessOntology.ts  Snowflake-native, steward-approved MEANING: definitions,
- *                        synonyms, typed relationships, representations (concept ->
- *                        Snowflake object) and change history.
- *   ontologySchema.ts    the app's OPERATIONAL model in SAP_SUPPLY_CHAIN.ONTOLOGY:
- *                        abstract flags, typed properties, cardinality, the
- *                        substitution rule, class -> table maps, instance counts.
- *
- * Business Ontology has no field for anything in the second list, so those keep
- * coming from the app model. Each native node maps back to one app class
- * (`appClass`); only the app's technical root, Entity, has no native node.
+ * The app is built on this domain: the scenario network and the digital thread
+ * are exported by walking its relationships and reading each concept's
+ * representations (tools/export_ontology_network.py, tools/export_ops_thread.py),
+ * and the Ontology page shows it as governed: definitions, synonyms, typed
+ * relationships, representations and change history.
  *
  * Source: the "Supply Chain" domain on MSB89522, exported read-only by
  * tools/export_business_ontology.py. Read from JSON, like the schema, so the
@@ -21,8 +16,6 @@
 
 import fs from "fs";
 import path from "path";
-import type { OntologySchema } from "./ontologySchema.js";
-import { treePositions, branchColor } from "./ontologySchema.js";
 
 export interface BoEdge { type: string; label: string | null; direction: "out" | "in"; node: string | null }
 export interface BoRepresentation { object: string; fqn: string; objectType: string; role: string; validity: string | null }
@@ -83,7 +76,7 @@ function boxFor(name: string, sub: string) {
 // relationships around Plant, so it is laid out as a network: parties and
 // the plant in the middle, what plants make and move to the right, the
 // traceability chain to the left and the SAP catalog branch underneath.
-// Concepts not listed fall back to the class-tree position.
+// Every concept in the domain has a slot; a new one lands at the origin until added.
 const SLOT: Record<string, [number, number]> = {
   Party: [1, 0],
   Supplier: [0, 1], Customer: [2, 1],
@@ -100,21 +93,32 @@ const SLOT: Record<string, [number, number]> = {
  * The native graph. IS_A edges get the subClassOf style; every other native
  * type is a labelled relationship.
  */
-export function buildBoGraph(bo: BusinessOntology, sch: OntologySchema): any[] {
+// Colour by branch: the concept's topmost IS_A ancestor.
+const BRANCH: Record<string, string> = {
+  Party: "#0369a1", Facility: "#1B3A57", "Material Flow": "#0e7490",
+  "Material Category": "#0f766e", "Catalog Object": "#475569",
+};
+
+function branchOf(bo: BusinessOntology, name: string): string {
+  const parent = new Map(bo.relationships.filter((r) => r.type === "IS_A").map((r) => [r.source, r.target]));
+  let n = name;
+  for (let i = 0; i < 10 && parent.has(n); i++) n = parent.get(n)!;
+  return BRANCH[n] ?? "#334155";
+}
+
+export function buildBoGraph(bo: BusinessOntology): any[] {
   const byName = new Map(bo.nodes.map((n) => [n.name, n]));
-  const classes = sch.classes.filter((c) => bo.nodes.some((n) => n.appClass === c.name));
-  const tree = treePositions(sch, classes);
   const pos = new Map<string, { x: number; y: number }>();
   for (const n of bo.nodes) {
-    const s = SLOT[n.appClass];
-    pos.set(n.appClass, s ? { x: s[0] * 250, y: s[1] * 95 } : tree.get(n.appClass) ?? { x: 0, y: 0 });
+    const s = SLOT[n.appClass] ?? [0, 0];
+    pos.set(n.appClass, { x: s[0] * 250, y: s[1] * 95 });
   }
   const nodes = bo.nodes.map((n) => ({
     data: {
       id: `bo::${n.name}`,
       label: `${n.name}\n${n.kind === "TERM" ? "term" : "entity"} · ${n.status?.toLowerCase() ?? ""}`,
       name: n.appClass, boName: n.name, kind: "class", native: true,
-      processColor: branchColor(sch, n.appClass),
+      processColor: branchOf(bo, n.name),
       // same box rule as the app graph: 12px semibold ~7.4px/char, 9.5px ~5.3px/char
       ...boxFor(n.name, `entity · ${n.status?.toLowerCase() ?? ""}`), abstract: false,
       sub: [n.description ?? "", `${n.representations.length} representation(s)`].filter(Boolean).join("<br>"),

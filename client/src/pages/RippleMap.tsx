@@ -7,6 +7,7 @@ import { buildSubSteps, groupByHop, revealedFlows, revealedHop } from "../lib/su
 import { ExplainStep, KpiCards, PaceControl, SubtitleBand } from "../components/StepCards";
 import { dwellMs, usePace } from "../lib/pace";
 import { AskCortex } from "../components/AskCortex";
+import { BuiltOn } from "../components/SourceBadge";
 
 /**
  * The ripple, geographically and topologically, stepped one lane at a time.
@@ -96,6 +97,7 @@ export default function RippleMap() {
 
   return (
     <div className="space-y-4">
+      <BuiltOn walks="The ripple follows the governed relationships: Supplier supplies Plant, Plant ships to Customer, plus inter-plant Material Flows." />
       {disruption && (
         <div className="flex justify-end">
           <AskCortex topic="ripple" args={{ disruption }} label="Ask Cortex: explain this ripple"

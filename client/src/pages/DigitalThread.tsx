@@ -3,6 +3,7 @@ import { useQuery } from "../hooks/useQuery";
 import { thread } from "../lib/api";
 import { AskCortex } from "../components/AskCortex";
 import { ArrowRight } from "lucide-react";
+import { BuiltOn } from "../components/SourceBadge";
 
 const money = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1e3)}K`);
 const RES: Record<string, string> = {
@@ -42,6 +43,7 @@ export default function DigitalThread() {
 
   return (
     <div className="space-y-6">
+      <BuiltOn walks="Walks System Serial has part Component Lot, shipped on Sales Order, placed by Customer; Component Lot supplied by Supplier; Equipment installed at Plant." />
       <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5">
         <div className="text-sm text-slate-600">
           <p>The operational digital thread is part of the ontology, not a report: four new classes and seven relations

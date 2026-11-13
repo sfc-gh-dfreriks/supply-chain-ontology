@@ -21,7 +21,7 @@ export function OperationsPulse({ onNavigate }: { onNavigate?: (page: string) =>
         <div>
           <h2 className="text-base font-bold text-slate-900">Operations pulse — from Supply Chain 360</h2>
           <p className="text-xs text-slate-500">
-            OTIF, late cost, operating rate, tool risk and component shortfall, joined to each Plant node in the graph.
+            OTIF, late cost, operating rate, tool risk and component shortfall, read from the Sales Order, Plant and Equipment representations in Business Ontology.
             Order, tool and lot data is representative demo enrichment keyed to SAP master data.
           </p>
         </div>

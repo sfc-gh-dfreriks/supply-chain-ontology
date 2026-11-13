@@ -15,7 +15,7 @@
  * ranking and prose. That split is deliberate and worth preserving: if the model
  * were asked to do arithmetic the figures would stop being auditable.
  */
-import { runSql } from "./analyst.js";
+import { runSql } from "./snowflake.js";
 import type { ScenarioResult } from "./scenario.js";
 import type { MitigationPlan } from "./mitigate.js";
 

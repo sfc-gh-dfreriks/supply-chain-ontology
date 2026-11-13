@@ -7,6 +7,7 @@ import { money, pct } from "../lib/severity";
 import { STATIC } from "../lib/api";
 import { AskCortex } from "../components/AskCortex";
 import type { Disruption, DisruptionKind } from "../lib/api";
+import { BuiltOn } from "../components/SourceBadge";
 
 /**
  * Build a disruption, run it, and read the consequences bucketed by what each
@@ -116,6 +117,7 @@ export default function ScenarioStudio() {
 
   return (
     <div className="space-y-4">
+      <BuiltOn walks="Network found by walking supplies and ships to; flows are the kinds of Material Flow; capacity and buffers are Plant properties; reroutes use Material Category, produced by Plant." />
       {netError && (
         <div className="rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
           Could not load the network: {netError}

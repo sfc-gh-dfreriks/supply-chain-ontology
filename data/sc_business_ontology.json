@@ -1,12 +1,12 @@
 {
  "domain": "Supply Chain",
  "account": "MSB89522",
- "exportedAt": "2026-11-13T17:56:11+00:00",
+ "exportedAt": "2026-11-13T20:37:35+00:00",
  "snowsightUrl": "https://app.snowflake.com/sfsenorthamerica/dfreriks_aws1_w2/#/data/business-ontology",
  "counts": {
   "nodes": 21,
   "relationships": 26,
-  "representations": 18
+  "representations": 25
  },
  "nodes": [
   {
@@ -216,6 +216,13 @@
    ],
    "representations": [
     {
+     "object": "VW_ONT_LOT_BLAST_RADIUS",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_LOT_BLAST_RADIUS",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    },
+    {
      "object": "VW_ONT_COMPONENTLOT",
      "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_COMPONENTLOT",
      "objectType": "View",
@@ -224,9 +231,9 @@
     }
    ],
    "history": {
-    "events": 6,
+    "events": 7,
     "truncated": false,
-    "last": 1794588054457,
+    "last": 1794597366333,
     "changedBy": [
      "DFRERIKS"
     ]
@@ -362,17 +369,31 @@
    ],
    "representations": [
     {
+     "object": "DT_EQUIPMENT_HEALTH",
+     "fqn": "SAP_SUPPLY_CHAIN.ANALYTICS.DT_EQUIPMENT_HEALTH",
+     "objectType": "Table",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    },
+    {
      "object": "VW_ONT_EQUIPMENT",
      "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_EQUIPMENT",
      "objectType": "View",
      "role": "DESCRIBES",
      "validity": "VALID"
+    },
+    {
+     "object": "A_WORK_CENTER",
+     "fqn": "SAP_SUPPLY_CHAIN.WORK_CENTER.A_WORK_CENTER",
+     "objectType": "Table",
+     "role": "DESCRIBES",
+     "validity": "VALID"
     }
    ],
    "history": {
-    "events": 5,
+    "events": 7,
     "truncated": false,
-    "last": 1794588053593,
+    "last": 1794597828363,
     "changedBy": [
      "DFRERIKS"
     ]
@@ -567,12 +588,19 @@
      "objectType": "View",
      "role": "DESCRIBES",
      "validity": "VALID"
+    },
+    {
+     "object": "V_PRODUCES",
+     "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.V_PRODUCES",
+     "objectType": "View",
+     "role": "DESCRIBES",
+     "validity": "VALID"
     }
    ],
    "history": {
-    "events": 5,
+    "events": 6,
     "truncated": false,
-    "last": 1794588053953,
+    "last": 1794597366005,
     "changedBy": [
      "DFRERIKS"
     ]
@@ -778,6 +806,20 @@
    ],
    "representations": [
     {
+     "object": "DT_OPERATING_RATE",
+     "fqn": "SAP_SUPPLY_CHAIN.ANALYTICS.DT_OPERATING_RATE",
+     "objectType": "Table",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    },
+    {
+     "object": "DT_COMPONENT_COVER",
+     "fqn": "SAP_SUPPLY_CHAIN.ANALYTICS.DT_COMPONENT_COVER",
+     "objectType": "Table",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    },
+    {
      "object": "VW_ONT_PLANT",
      "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_PLANT",
      "objectType": "View",
@@ -786,9 +828,9 @@
     }
    ],
    "history": {
-    "events": 10,
+    "events": 12,
     "truncated": false,
-    "last": 1794588054654,
+    "last": 1794597828064,
     "changedBy": [
      "DFRERIKS"
     ]
@@ -836,6 +878,13 @@
    ],
    "representations": [
     {
+     "object": "DT_ORDER_FULFILLMENT",
+     "fqn": "SAP_SUPPLY_CHAIN.ANALYTICS.DT_ORDER_FULFILLMENT",
+     "objectType": "Table",
+     "role": "DESCRIBES",
+     "validity": "VALID"
+    },
+    {
      "object": "VW_ONT_SALESORDER",
      "fqn": "SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_SALESORDER",
      "objectType": "View",
@@ -844,9 +893,9 @@
     }
    ],
    "history": {
-    "events": 7,
+    "events": 8,
     "truncated": false,
-    "last": 1794588054118,
+    "last": 1794597366157,
     "changedBy": [
      "DFRERIKS"
     ]
