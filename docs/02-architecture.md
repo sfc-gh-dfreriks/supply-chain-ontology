@@ -92,17 +92,18 @@ the request would hang instead of returning an error.
 
 ### Client — React + Vite + Cytoscape, port 5179
 
-Seven pages:
+Eight pages, in sidebar order (the app opens on Ontology):
 
 | Page | Route | Shows |
 |---|---|---|
-| Executive Dashboard | `#overview` | Operations pulse, the governed domain, the network |
 | Ontology | `#model` | Domain graph; each concept's definition, relationships, representations, history |
+| Snowflake Ontology Details | `#snowflake` | Snowsight screenshots of the same domain, with what each shows and why it matters |
+| Guided Demo | `#demo` | Seven-step walkthrough of the hurricane scenario |
 | Scenario Studio | `#scenario` | Build a disruption from five event types |
 | Ripple Map | `#ripple` | Geography and topology side by side, cascade played lane by lane |
-| Mitigation & Recovery | `#mitigation` | The recovery as a movie, then the plan and an AI to interrogate |
+| Mitigation & Recovery | `#mitigation` | The recovery as a movie (old lanes red, new lanes dashed green), then the plan and an AI to interrogate |
 | Digital Thread | `#thread` | Orders, systems, component lots, tools; lot blast radius |
-| Guided Demo | `#demo` | Seven-step walkthrough of the hurricane scenario |
+| Executive Dashboard | `#overview` | Operations pulse, the governed domain, the network |
 
 **Ask Cortex** buttons on most pages send the view on screen to `AI_COMPLETE`
 (`claude-opus-5-5`) with the governed definitions, so the answer cites the

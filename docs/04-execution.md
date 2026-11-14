@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5179>. All seven pages work immediately from the three
+Open <http://localhost:5179>. All eight pages work immediately from the three
 committed data files — `data/sc_business_ontology.json` (the governed domain),
 `data/sc_network.json` (the scenario network) and `data/sc_ops_thread.json`
 (digital thread and operations pulse). No Snowflake connection is needed.

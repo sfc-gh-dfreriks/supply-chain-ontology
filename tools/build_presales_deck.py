@@ -47,7 +47,9 @@ PUBLIC_URL = "https://sfc-gh-dfreriks.github.io/supply-chain-ontology/"
 
 APP = "http://localhost:5179/"
 # name -> (hash route, scroll before capture). Scenario pages load the hurricane
-# preset through sessionStorage, the same hook the Guided Demo uses.
+# preset through sessionStorage, the same hook the Guided Demo uses. The
+# mitigation shot jumps to the RESULT step, so the red old lanes and green
+# reroutes are both on the map.
 SHOTS_SPEC = {
     "scenario": ("#scenario", 0),
     "ripple": ("#ripple", 0),
@@ -80,6 +82,9 @@ def capture_shots():
         for name, (route, scroll) in SHOTS_SPEC.items():
             pg.goto(APP + route)
             pg.wait_for_timeout(5000)
+            if name == "mitigation":
+                pg.get_by_role("button", name="result", exact=True).click()
+                pg.wait_for_timeout(6000)
             if scroll:
                 pg.mouse.wheel(0, scroll)
                 pg.wait_for_timeout(1500)

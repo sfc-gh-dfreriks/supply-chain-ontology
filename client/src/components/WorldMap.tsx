@@ -222,8 +222,9 @@ export function WorldMap({
             return (
               <path key={f.flow_id} d={arcPath(x1, y1, x2, y2)}
                 stroke={old ? OLD_LANE : hit ? severityColor(a!.impactFactor) : "#475569"}
-                strokeWidth={old ? Math.max(w * 1.6, 2.2 * k) : hit ? (lit ? w * 1.9 : w) : w}
-                strokeOpacity={old ? 0.9 : hit ? (lit ? 1 : 0.22) : spotlight ? 0.12 : 0.34}
+                strokeWidth={old ? Math.max(w * 1.6, 2.6 * k) : hit && !contrast ? (lit ? w * 1.9 : w) : w}
+                strokeOpacity={old ? 0.95 : contrast ? (hit ? 0.16 : 0.12)
+                  : hit ? (lit ? 1 : 0.22) : spotlight ? 0.12 : 0.34}
                 style={{ transition: "stroke-opacity 300ms, stroke-width 300ms" }}
                 onMouseEnter={(e) => tip(e, [
                   `${f.source_name} → ${f.target_name}`,
@@ -240,8 +241,8 @@ export function WorldMap({
         <g fill="none">
           {rerouteArcs.map(({ r, d }) => (
             <path key={`rr-${r.flow_id}`} d={d} stroke={contrast ? NEW_LANE : "#38bdf8"}
-              strokeWidth={(contrast ? 2.8 : 2.4) * k}
-              strokeDasharray={`${7 * k} ${5 * k}`} strokeOpacity={spotlight ? 0.35 : 0.95}
+              strokeWidth={(contrast ? 3.4 : 2.4) * k}
+              strokeDasharray={`${7 * k} ${5 * k}`} strokeOpacity={contrast ? 1 : spotlight ? 0.35 : 0.95}
               onMouseEnter={(e) => tip(e, [
                 `REROUTE · ${r.material_category}`,
                 `${r.toPlant} → ${r.customer} (was ${r.fromPlant})`,
@@ -316,7 +317,7 @@ export function WorldMap({
           <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: TYPE_COLOR.Customer }} /> customer
         </span>
         <span className="flex items-center gap-1">
-          <svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="#38bdf8" strokeWidth="2.4" strokeDasharray="7 5" /></svg>
+          <svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke={contrast ? NEW_LANE : "#38bdf8"} strokeWidth="2.4" strokeDasharray="7 5" /></svg>
           {contrast ? "new lane (reroute)" : "reroute"}
         </span>
         {contrast && (

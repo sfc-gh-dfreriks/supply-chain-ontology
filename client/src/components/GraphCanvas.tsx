@@ -89,6 +89,8 @@ export function GraphCanvas({
         wheelSensitivity={0.2}
         cy={(cy: cytoscape.Core) => {
           cyRef.current = cy;
+          // Dev only: lets the doc screenshot scripts select a node by name.
+          if (import.meta.env.DEV) (window as any).__cy = cy;
           cy.removeAllListeners();
           cy.on("tap", "node", (e) => {
             cy.elements().removeClass("faded highlighted");
