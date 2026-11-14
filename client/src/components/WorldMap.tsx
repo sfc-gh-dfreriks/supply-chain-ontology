@@ -33,7 +33,12 @@ export interface MapProps {
   selected?: string | null;
   onSelect?: (id: string | null) => void;
   height?: number;
+  /** Before/after mode: lanes being replaced turn red, replacement lanes green. */
+  contrast?: boolean;
 }
+
+const OLD_LANE = "#ef4444";
+const NEW_LANE = "#22c55e";
 
 const W = 1000;
 const H = 500;
@@ -90,7 +95,7 @@ const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) /
 
 export function WorldMap({
   nodes, flows, affected, impaired, reroutes,
-  revealHop, highlightFlows, focusNodes, selected, onSelect, height = 460,
+  revealHop, highlightFlows, focusNodes, selected, onSelect, height = 460, contrast,
 }: MapProps) {
   const [land, setLand] = useState<number[][][][] | null>(null);
   const [hover, setHover] = useState<{ x: number; y: number; lines: string[] } | null>(null);
@@ -167,6 +172,8 @@ export function WorldMap({
     return parts.join(" ");
   }, [land]);
 
+  const replaced = useMemo(() => new Set((reroutes ?? []).map((r) => r.flow_id)), [reroutes]);
+
   const rerouteArcs = useMemo(() => {
     if (!reroutes?.length) return [];
     const byName = new Map(nodes.map((n) => [n.node_name, n]));
@@ -204,6 +211,7 @@ export function WorldMap({
         {/* baseline flows */}
         <g fill="none">
           {flows.map((f) => {
+            const old = contrast && replaced.has(f.flow_id);
             const a = affected?.get(f.flow_id);
             const visible = !a || show(a.hop);
             const hit = !!(a && visible);
@@ -213,13 +221,14 @@ export function WorldMap({
             const w = edgeWidth(f.monthly_volume, maxVol, 0.8, 5) * k;
             return (
               <path key={f.flow_id} d={arcPath(x1, y1, x2, y2)}
-                stroke={hit ? severityColor(a!.impactFactor) : "#475569"}
-                strokeWidth={hit ? (lit ? w * 1.9 : w) : w}
-                strokeOpacity={hit ? (lit ? 1 : 0.22) : spotlight ? 0.12 : 0.34}
+                stroke={old ? OLD_LANE : hit ? severityColor(a!.impactFactor) : "#475569"}
+                strokeWidth={old ? Math.max(w * 1.6, 2.2 * k) : hit ? (lit ? w * 1.9 : w) : w}
+                strokeOpacity={old ? 0.9 : hit ? (lit ? 1 : 0.22) : spotlight ? 0.12 : 0.34}
                 style={{ transition: "stroke-opacity 300ms, stroke-width 300ms" }}
                 onMouseEnter={(e) => tip(e, [
                   `${f.source_name} → ${f.target_name}`,
                   `${f.material_category} · ${f.monthly_volume} units/mo · ${money(f.monthly_value)}/mo`,
+                  ...(old ? ["OLD LANE · replaced by the green reroute"] : []),
                   ...(hit ? [`${Math.round(a!.impactFactor * 100)}% lost · ${money(a!.valueAtRisk)} at risk · hop ${a!.hop}`] : []),
                 ])}
                 onMouseLeave={() => setHover(null)} />
@@ -230,7 +239,8 @@ export function WorldMap({
         {/* reroute overlay — dashed, so a proposal cannot read as an existing lane */}
         <g fill="none">
           {rerouteArcs.map(({ r, d }) => (
-            <path key={`rr-${r.flow_id}`} d={d} stroke="#38bdf8" strokeWidth={2.4 * k}
+            <path key={`rr-${r.flow_id}`} d={d} stroke={contrast ? NEW_LANE : "#38bdf8"}
+              strokeWidth={(contrast ? 2.8 : 2.4) * k}
               strokeDasharray={`${7 * k} ${5 * k}`} strokeOpacity={spotlight ? 0.35 : 0.95}
               onMouseEnter={(e) => tip(e, [
                 `REROUTE · ${r.material_category}`,
@@ -307,8 +317,14 @@ export function WorldMap({
         </span>
         <span className="flex items-center gap-1">
           <svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="#38bdf8" strokeWidth="2.4" strokeDasharray="7 5" /></svg>
-          reroute
+          {contrast ? "new lane (reroute)" : "reroute"}
         </span>
+        {contrast && (
+          <span className="flex items-center gap-1">
+            <svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke={OLD_LANE} strokeWidth="3" /></svg>
+            old lane (replaced)
+          </span>
+        )}
         <span>thickness = volume · colour = share lost</span>
         {k < 0.99 && (
           <span className="ml-auto rounded bg-slate-100 px-1.5 text-[10px] text-slate-500">

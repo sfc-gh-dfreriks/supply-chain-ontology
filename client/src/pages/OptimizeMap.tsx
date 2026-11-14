@@ -110,7 +110,7 @@ export default function OptimizeMap() {
             Reroutes on the network
           </span>
           <span className="text-[10px] text-slate-400">
-            dashed green = replacement lane · red = the lane it replaces
+            red = old lane being replaced · dashed green = new lane
           </span>
           {zoom && step.focusNodes.length > 0 && (
             <span className="text-[10px] text-emerald-600">following {badge.toLowerCase()}</span>
@@ -122,7 +122,7 @@ export default function OptimizeMap() {
             reroutes={step.reroutesUpto}
             highlightFlows={new Set(step.brokenFlowIds)}
             focusNodes={zoom ? step.focusNodes : []}
-            selected={selected} onSelect={setSelected} height={460} />
+            selected={selected} onSelect={setSelected} height={460} contrast />
           <SubtitleBand
             text={step.subtitle}
             badge={badge}

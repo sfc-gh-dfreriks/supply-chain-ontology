@@ -4,6 +4,7 @@ import { useQuery } from "./hooks/useQuery";
 import { api } from "./lib/api";
 import Overview from "./pages/Overview";
 import OntologyModel from "./pages/OntologyModel";
+import SnowflakeOntology from "./pages/SnowflakeOntology";
 import Demo from "./pages/Demo";
 import ScenarioStudio from "./pages/ScenarioStudio";
 import RippleMap from "./pages/RippleMap";
@@ -13,13 +14,14 @@ import DigitalThread from "./pages/DigitalThread";
 import { OperationsPulse } from "./components/OperationsPulse";
 
 const TITLES: Record<PageId, string> = {
-  overview: "Executive Dashboard",
   model: "Ontology — the governed Supply Chain domain",
+  snowflake: "Snowflake Ontology Details — the domain inside Snowsight",
   demo: "Guided Demo",
   scenario: "Scenario Studio",
   ripple: "Ripple Map — geography and topology",
   mitigation: "Mitigation & Recovery",
   thread: "Digital Thread — orders, systems, lots and tools",
+  overview: "Executive Dashboard",
 };
 
 const PAGE_IDS = Object.keys(TITLES) as PageId[];
@@ -27,11 +29,11 @@ const PAGE_IDS = Object.keys(TITLES) as PageId[];
 // Old links keep working: the recovery map now lives on the Mitigation page.
 const ALIASES: Record<string, PageId> = { optimize: "mitigation" };
 
-/** Read the page from the URL hash, falling back to overview for anything unknown. */
+/** Read the page from the URL hash, falling back to the Ontology page (first in the nav). */
 function pageFromHash(): PageId {
   const h = window.location.hash.replace(/^#\/?/, "");
   if (ALIASES[h]) return ALIASES[h];
-  return PAGE_IDS.includes(h as PageId) ? (h as PageId) : "overview";
+  return PAGE_IDS.includes(h as PageId) ? (h as PageId) : "model";
 }
 
 export default function App() {
@@ -59,6 +61,7 @@ export default function App() {
         <Overview /></>);
       case "thread": return <DigitalThread />;
       case "model": return <OntologyModel />;
+      case "snowflake": return <SnowflakeOntology />;
       case "demo": return <Demo onNavigate={setPage} />;
       case "scenario": return <ScenarioStudio />;
       case "ripple": return <RippleMap />;
