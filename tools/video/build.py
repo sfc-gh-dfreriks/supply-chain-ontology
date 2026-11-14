@@ -220,7 +220,7 @@ def title_card(path, sub):
     img = Image.new("RGBA", (W, VH), NAVY + (255,))
     d = ImageDraw.Draw(img)
     d.text((90, 360), "Supply Chain Ontology", font=_font(34, True), fill=BLUE)
-    d.text((90, 410), "Scenario modelling: a hurricane closes Austin",
+    d.text((90, 410), "Built on Snowflake Business Ontology",
            font=_font(52, True), fill=WHITE)
     d.text((90, 500), sub, font=_font(20), fill=DIM)
     d.rounded_rectangle([90, 560, 250, 564], 2, fill=BLUE + (255,))
@@ -234,7 +234,7 @@ def end_card(path):
     d.text((90, 330), "Explore it yourself", font=_font(44, True), fill=WHITE)
     rows = [("Live application", "sfc-gh-dfreriks.github.io/supply-chain-ontology"),
             ("Source and documentation", "github.com/sfc-gh-dfreriks/supply-chain-ontology"),
-            ("Built on", "SAP data in Snowflake · Cortex AI · no pipeline, no copies")]
+            ("Built on", "Snowflake Business Ontology · SAP data in Snowflake · Cortex AI")]
     y = 420
     for k, v in rows:
         d.text((90, y), k, font=_font(15), fill=DIM)
@@ -357,6 +357,17 @@ def do_action(pg, act):
     if kind == "wait":
         pg.wait_for_timeout(act[1])
         return act[1]
+    if kind == "tap_node":
+        # The ontology graph is a canvas; the dev build exposes it as window.__cy.
+        pg.evaluate("n => window.__cy.nodes().filter(x => x.data('boName') === n || "
+                    "x.data('name') === n)[0].emit('tap')", act[1])
+        pg.wait_for_timeout(900)
+        return 900
+    if kind == "scroll_to_text":
+        pg.evaluate("t => document.evaluate(`//h3[contains(., '${t}')]`, document, null, 9, null)"
+                    ".singleNodeValue.scrollIntoView({block: 'start'})", act[1])
+        pg.wait_for_timeout(900)
+        return 900
     raise ValueError(f"unknown action {act!r}")
 
 

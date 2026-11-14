@@ -5,8 +5,7 @@ Ten slides for a Snowflake SE to drop into their own deck: the problem, the
 ontology, the scenario result, what is real, and the ask. Screenshots are
 captured from the running app with Playwright (http://localhost:5179, dev server
 up) so the slides show the current product; they are cached in tools/.presales_shots
-and reused when the app is not running. The narrated walkthrough video predates
-the 13 Nov 2026 rebuild, so it is no longer used as a screenshot source.
+and reused when the app is not running, rather than taken from the narrated video.
 
 Figures come from tools/facts.py.
 

@@ -156,7 +156,7 @@ source, and no `**`, `` ` `` or `](http` should survive outside a code block.
 
 ## The narrated walkthrough video
 
-A four-minute video (recorded before the 13 Nov 2026 rebuild, so it shows the earlier page layout) of the Austin hurricane scenario, driving the real
+A five-minute video (re-recorded 14 Nov 2026) that opens on the Business Ontology, then the Austin hurricane scenario, driving the real
 app rather than a mock-up.
 
 ```bash

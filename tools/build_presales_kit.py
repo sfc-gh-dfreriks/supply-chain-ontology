@@ -268,13 +268,14 @@ def build_start_here(X, sc, network):
     h1(doc, "What the video covers")
     body(
         doc,
-        "The narrated walkthrough was recorded on 08 October 2026 in the author's "
-        "own voice (a Qwen3-TTS clone), before the 13 Nov 2026 rebuild on Business "
-        "Ontology, so it shows the earlier page layout: the recovery appears as a "
-        "separate page, which is now part of Mitigation & Recovery. "
-        "It follows the hurricane scenario end to end and its scenario figures still "
-        "match the live app. It does not show the Ontology page, the Digital Thread or "
-        "the Ask Cortex buttons; demo those live.",
+        "The narrated walkthrough was re-recorded on 14 November 2026 in the author's "
+        "own voice (a Qwen3-TTS clone), on the current eight-page app. It opens on "
+        "Snowflake Business Ontology: the governed Supply Chain domain, the Plant "
+        "concept, what the app reads through the ontology, and the same domain in "
+        "Snowsight. It then runs the hurricane scenario end to end, tying each step "
+        "to the relationship it walks, and plays the recovery with old lanes in red "
+        "and new lanes in green. It does not show the Digital Thread or the Ask "
+        "Cortex buttons; demo those live.",
     )
 
     h1(doc, "Support")
@@ -350,9 +351,9 @@ def build_quick_start(X, sc, network):
     )
     bullet(
         doc,
-        "If you are pairing the video with a live demo: the video covers the hurricane "
-        "flow only, in the earlier page layout. The Ontology page, Digital Thread and "
-        "the Ask Cortex buttons are live-only — show them after the video.",
+        "If you are pairing the video with a live demo: the video covers the ontology "
+        "and the hurricane flow. The Digital Thread and the Ask Cortex buttons are "
+        "live-only — show them after the video.",
     )
 
     h1(doc, "The ten-minute path")
