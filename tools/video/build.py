@@ -368,7 +368,7 @@ def do_action(pg, act):
         pg.wait_for_timeout(900)
         return 900
     if kind == "scroll_to_text":
-        pg.evaluate("t => document.evaluate(`//h3[contains(., '${t}')]`, document, null, 9, null)"
+        pg.evaluate("t => document.evaluate(`//*[self::h2 or self::h3][contains(., '${t}')]`, document, null, 9, null)"
                     ".singleNodeValue.scrollIntoView({block: 'start'})", act[1])
         pg.wait_for_timeout(900)
         return 900

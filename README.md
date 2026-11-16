@@ -69,7 +69,7 @@ In sidebar order; the app opens on Ontology.
 | **Guided Demo** | Seven-step walkthrough of the hurricane scenario |
 | **Scenario Studio** | Build a disruption from five event types; results bucketed by the response each needs |
 | **Ripple Map** | Geography and topology side by side, the cascade played one lane at a time |
-| **Mitigation & Recovery** | The recovery as a movie, one beat per reroute, then the plan: reroutes inside real capacity (old lanes red, new lanes dashed green), what cannot be saved and why, plus an AI you can interrogate |
+| **Mitigation & Recovery** | The recovery as a movie, one beat per reroute, then the plan: reroutes inside real capacity (old lanes red, new lanes dashed green), what cannot be saved and why, **Execute in S/4HANA** (governed by Action nodes, with second-person approval), plus an AI you can interrogate |
 | **Digital Thread** | Orders, built systems, component lots and tools: "which customers did this bad lot reach?" answered by walking the governed relationships |
 | **Ask Cortex** (most pages) | A grounded AI_COMPLETE reading of the view on screen, citing the governed definitions |
 
@@ -135,8 +135,8 @@ Playwright (`npm run dev`; the hurricane preset is loaded through
 `sessionStorage['sc.preset']`), cached in `tools/.presales_shots/` and reused if
 the app is down.
 
-The narrated walkthrough (`04_Walkthrough_Narrated_4min54.mp4`, re-recorded
-14 Nov 2026) opens on Snowflake Business Ontology, then runs the hurricane scenario
+The narrated walkthrough (`04_Walkthrough_Narrated_6min07.mp4`, re-recorded
+16 Nov 2026) opens on Snowflake Business Ontology, shows the agent searching it, then runs the hurricane scenario
 and the red/green recovery. Its script is `tools/video/segments.py`.
 
 Check the deck renders before shipping it — a text box that overflows in
@@ -153,6 +153,56 @@ slides put the screenshot in a 7.6-inch column with the KPI cards stacked beside
 it instead.
 
 ---
+
+---
+
+## Executing the recovery in S/4HANA (Action nodes)
+
+Mitigation & Recovery can carry its reroutes through to SAP S/4HANA, governed by
+**Action nodes** in the Supply Chain domain (the pattern in *Ontology Execution
+and Writeback*): the ontology holds each operation's contract, the app checks it,
+and only the procedure the contract names writes.
+
+| Action (Supply Chain domain) | Acts on | S/4HANA change | Runs via |
+|---|---|---|---|
+| **Reassign Delivering Plant** | Sales Order | `PATCH A_SalesOrderItem.ProductionPlant` (VBAP-WERKS) | `S4_WRITEBACK.S4_REASSIGN_DELIVERING_PLANT` |
+| **Create Planned Order** | Plant | `POST A_PlannedOrder` (PLAF) | `S4_WRITEBACK.S4_CREATE_PLANNED_ORDER` |
+| **Approve Recovery Change Request** | Sales Order | governance gate | `S4_WRITEBACK.SP_DECIDE_CR` |
+
+The app finds these by walking `ACTS_ON` into Sales Order and Plant
+(`FIND_ACTIONS_FOR_ENTITY`), never by name, so a steward adding an Action changes
+what the page offers.
+
+**Flow:** raise a change request (one row per S/4 document, every contract
+criterion checked, nothing written) → a second person approves → post → review
+the OData calls and change documents → reverse for a demo reset.
+
+**Governance**, enforced in Snowflake, not just the UI:
+- the approver must hold `SC_RECOVERY_APPROVER` and must not be the requester;
+- the approver must tick three acknowledgements, including that this changes live
+  transactional data, and type `POST TO S4HANA`;
+- the server recomputes the plan and refuses approval or posting if it no longer
+  matches the request (plan hash);
+- each Action procedure re-checks its own criteria and refuses any call that does
+  not match an approved, eligible item, so calling it directly does nothing;
+- every change is recorded in CDHDR/CDPOS-style change documents under the approver.
+
+**What is simulated:** the S/4HANA system (S4H, client 100) is modelled in
+`SAP_SUPPLY_CHAIN.S4_WRITEBACK`: document mirrors seeded with one open sales order
+item per customer lane, change documents, and an outbox holding the exact OData
+call S/4 would receive, with a simulated response. No real S/4HANA connection is
+made. Pointing the Action procedures at an external function or connector for the
+real OData services would leave the contracts and governance unchanged.
+
+```bash
+snow sql -f sql/ontology/10_s4_writeback.sql      # or run it in a worksheet
+python3 tools/create_recovery_actions.py          # Action nodes (idempotent)
+python3 tools/test_s4_writeback.py                # 20 governance checks
+APP=http://localhost:5179 python3 tools/shoot_writeback.py   # UI walk-through + screenshots
+```
+
+The public build shows a baked example read-only
+(`python3 tools/bake_static.py --only-writeback`).
 
 ---
 
