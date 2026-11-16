@@ -97,6 +97,7 @@ Nine pages, in sidebar order (the app opens on Ontology):
 | Page | Route | Shows |
 |---|---|---|
 | Ontology | `#model` | Domain graph; each concept's definition, relationships, representations, history |
+| Executive Dashboard | `#overview` | Operations pulse, the governed domain, the network |
 | Snowflake Ontology Details | `#snowflake` | Snowsight screenshots of the same domain, with what each shows and why it matters |
 | Ask Cortex | `#ask` | Questions across the whole supply chain: the governed domain, operations, thread and every preset scenario |
 | Guided Demo | `#demo` | Seven-step walkthrough of the hurricane scenario |
@@ -104,7 +105,6 @@ Nine pages, in sidebar order (the app opens on Ontology):
 | Ripple Map | `#ripple` | Geography and topology side by side, cascade played lane by lane |
 | Mitigation & Recovery | `#mitigation` | The recovery as a movie (old lanes red, new lanes dashed green), then the plan and an AI to interrogate |
 | Digital Thread | `#thread` | Orders, systems, component lots, tools; lot blast radius |
-| Executive Dashboard | `#overview` | Operations pulse, the governed domain, the network |
 
 The **Ask Cortex** page (topic `domain`) answers questions across the whole supply chain. **Ask Cortex** buttons on most pages send the view on screen to `AI_COMPLETE`
 (`claude-opus-5-5`) with the governed definitions, so the answer cites the

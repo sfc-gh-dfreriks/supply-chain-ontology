@@ -61,6 +61,7 @@ In sidebar order; the app opens on Ontology.
 | Page | What it shows |
 |---|---|
 | **Ontology** | The governed Supply Chain domain: graph, each concept's definition, relationships, representations and change history (with a link to Snowsight), and the table of what the app reads through it |
+| **Executive Dashboard** | Operations pulse (OTIF, late cost, operating rate, tool risk, component cover per plant), the governed domain, and the network the scenarios run on |
 | **Snowflake Ontology Details** | Snowsight screenshots of the same domain (graph, list, Supplier and Plant nodes, history), so viewers see where it is defined and approved |
 | **Ask Cortex** | Questions across the whole supply chain, answered from the governed domain, operations, the digital thread and every preset scenario with its recovery plan; suggested questions are pre-answered on the public site |
 | **Guided Demo** | Seven-step walkthrough of the hurricane scenario |
@@ -68,7 +69,6 @@ In sidebar order; the app opens on Ontology.
 | **Ripple Map** | Geography and topology side by side, the cascade played one lane at a time |
 | **Mitigation & Recovery** | The recovery as a movie, one beat per reroute, then the plan: reroutes inside real capacity (old lanes red, new lanes dashed green), what cannot be saved and why, plus an AI you can interrogate |
 | **Digital Thread** | Orders, built systems, component lots and tools: "which customers did this bad lot reach?" answered by walking the governed relationships |
-| **Executive Dashboard** | Operations pulse (OTIF, late cost, operating rate, tool risk, component cover per plant), the governed domain, and the network the scenarios run on |
 | **Ask Cortex** (most pages) | A grounded AI_COMPLETE reading of the view on screen, citing the governed definitions |
 
 Old links to `#optimize` open Mitigation & Recovery.

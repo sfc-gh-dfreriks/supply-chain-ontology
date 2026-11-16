@@ -7,6 +7,7 @@ export type PageId = "overview" | "model" | "snowflake" | "ask" | "demo" | "scen
 // its relationships over the data each concept represents.
 const NAV: { id: PageId; label: string; icon: any }[] = [
   { id: "model", label: "Ontology", icon: Layers },
+  { id: "overview", label: "Executive Dashboard", icon: LayoutDashboard },
   { id: "snowflake", label: "Snowflake Ontology Details", icon: Snowflake },
   { id: "ask", label: "Ask Cortex", icon: Sparkles },
   { id: "demo", label: "Guided Demo", icon: PlayCircle },
@@ -14,7 +15,6 @@ const NAV: { id: PageId; label: string; icon: any }[] = [
   { id: "ripple", label: "Ripple Map", icon: Globe2 },
   { id: "mitigation", label: "Mitigation & Recovery", icon: Wrench },
   { id: "thread", label: "Digital Thread", icon: Cable },
-  { id: "overview", label: "Executive Dashboard", icon: LayoutDashboard },
 ];
 
 export function Sidebar({ active, onNavigate, concepts, domain }: {

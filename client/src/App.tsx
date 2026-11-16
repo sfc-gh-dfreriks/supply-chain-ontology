@@ -16,6 +16,7 @@ import { OperationsPulse } from "./components/OperationsPulse";
 
 const TITLES: Record<PageId, string> = {
   model: "Ontology — the governed Supply Chain domain",
+  overview: "Executive Dashboard",
   snowflake: "Snowflake Ontology Details — the domain inside Snowsight",
   ask: "Ask Cortex — questions across the whole supply chain",
   demo: "Guided Demo",
@@ -23,7 +24,6 @@ const TITLES: Record<PageId, string> = {
   ripple: "Ripple Map — geography and topology",
   mitigation: "Mitigation & Recovery",
   thread: "Digital Thread — orders, systems, lots and tools",
-  overview: "Executive Dashboard",
 };
 
 const PAGE_IDS = Object.keys(TITLES) as PageId[];

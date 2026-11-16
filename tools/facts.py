@@ -16,6 +16,8 @@ HAMAMATSU = BAKED / "scenario_sim__supplier__SUP-001__100__45.json"
 PAGES = [
     ("Ontology", "#model",
      "The governed Supply Chain domain: graph, definitions, relationships, representations, history"),
+    ("Executive Dashboard", "#overview",
+     "Operations pulse, the governed domain and the network the scenarios run on"),
     ("Snowflake Ontology Details", "#snowflake",
      "Snowsight screenshots of the same domain: graph, list, Supplier and Plant nodes, change history"),
     ("Ask Cortex", "#ask",
@@ -29,8 +31,6 @@ PAGES = [
      "Reroutes inside real capacity, old lanes in red and new lanes in green; what cannot be saved and why"),
     ("Digital Thread", "#thread",
      "Orders, systems, component lots and tools: which customers did this bad lot reach?"),
-    ("Executive Dashboard", "#overview",
-     "Operations pulse, the governed domain and the network the scenarios run on"),
 ]
 
 
