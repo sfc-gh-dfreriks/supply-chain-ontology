@@ -114,6 +114,38 @@ def title_block(doc, title, subtitle, strap):
 # ---------------------------------------------------------------- START HERE
 
 
+def agent_search_section(doc, A):
+    """Short section + before/after table, from facts.agent_search()."""
+    h1(doc, "The agent searches the governed ontology")
+    body(
+        doc,
+        f"The Cortex agent {A['agent']} now has Snowflake Business Ontology search "
+        "(the business_ontology tool, plus read-only ontology reads through "
+        "system_execute_sql) alongside its Cortex Analyst and hierarchy tools. It reads "
+        "governed definitions such as Supply Chain.Plant and the Data Product HAS_PART "
+        "CDS Entity edge, cites the domain.concept it used, labels each number Governed, "
+        "Derived or Bound table, and searches before it declines an unknown term. "
+        "Numbers still come from the semantic views. US regions only: Business Ontology "
+        "is not available in EU or APAC.",
+    )
+    table(
+        doc,
+        ["Check", "Question", "Tools after", "Result"],
+        [[r["check"], r["question"], ", ".join(r["after_tools"]), r["verdict"]]
+         for r in A["rows"]],
+        [0.9, 2.2, 1.6, 2.3],
+        size=8,
+    )
+    body(
+        doc,
+        f"{A['checks']} checks run {A['run_date']}; {A['uses_bon']} now use "
+        f"business_ontology. In the app: Snowflake Ontology Details (#snowflake), panel "
+        f"\u201c{A['panel']}\u201d. Agent SQL: {A['sql']}; regenerate with "
+        "tools/export_agent_search.py.",
+        italic=True,
+    )
+
+
 def build_start_here(X, sc, network):
     doc = Document()
     setup_page(doc)
@@ -530,6 +562,8 @@ def build_quick_start(X, sc, network):
         italic=True,
     )
 
+    agent_search_section(doc, facts.agent_search())
+
     h1(doc, "Discovery questions")
     body(doc, "Ask these before you demo. They tell you which scenario to run and whether this qualifies.")
     bullet(doc, "When a site went down in the last two years, how long did it take you to work out what else stopped?")
@@ -738,6 +772,8 @@ def build_setup(X, sc, network):
         ],
         widths=[1.7, 5.0],
     )
+
+    agent_search_section(doc, facts.agent_search())
 
     h1(doc, "Refreshing")
     body(

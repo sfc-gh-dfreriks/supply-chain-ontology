@@ -112,6 +112,23 @@ def build():
     }
 
 
+def agent_search():
+    """Before/after checks for the agent's Business Ontology search
+    (client/src/data/agent_search.json, written by tools/export_agent_search.py)."""
+    d = _load(ROOT / "client" / "src" / "data" / "agent_search.json")
+    rows = d["rows"]
+    changed = [r for r in rows if r["before_tools"] != r["after_tools"]]
+    return {
+        "agent": d["agent"], "run_date": d["run_date"], "note": d["note"],
+        "rows": rows, "checks": len(rows),
+        "uses_bon": sum("business_ontology" in r["after_tools"] for r in rows),
+        "changed": len(changed),
+        "sql": "sql/ontology/11_agent_business_ontology.sql",
+        "screenshot": "/tmp/agentshots/sc_agent_search.png",
+        "panel": "The agent looks up the governed meaning before it answers",
+    }
+
+
 def _sim_file(preset):
     # same rule as sim_name() in tools/bake_static.py
     t = "-".join(sorted(preset["targets"]))

@@ -92,6 +92,7 @@ def main() -> int:
 
     say("1/7  exporting the Business Ontology domain")
     run([sys.executable, "tools/export_business_ontology.py"])
+    run([sys.executable, "tools/export_agent_search.py"])  # before/after agent runs, saved snapshot
     say("2/7  building the scenario network through the ontology")
     run([sys.executable, "tools/export_ontology_network.py"])
     say("3/7  building the digital thread through the ontology")

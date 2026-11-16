@@ -1,0 +1,9 @@
+{
+ "check": "number",
+ "question": "How many plants, customers and suppliers are in the network?",
+ "tools": [
+  "base_query_tool",
+  "system_execute_sql"
+ ],
+ "answer": "The network has **19 nodes**: **5 plants**, **8 customers** and **6 suppliers**.\n\n\n\nBetween them, these nodes are linked by 27 material flows worth about $56,700,000 a month."
+}

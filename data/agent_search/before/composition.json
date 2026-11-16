@@ -1,0 +1,10 @@
+{
+ "check": "composition",
+ "question": "What is a Data Product made of?",
+ "tools": [
+  "metadata_query_tool",
+  "system_execute_sql",
+  "system_execute_sql"
+ ],
+ "answer": "A Data Product is made of **CDS entities**. In the model, a Data Product is a business-data-catalog object that \"exposes\" a set of CDS entities, and it sits under one business process. This is the SAP BDC catalog side of the ontology (metadata about what data exists), not the supply-chain side, so it holds no plant, supplier or flow values.\n\n**How it is modelled (from the metadata tool)**\n- **Class:** `DataProduct`, a subclass of `CatalogObject`.\n- **What it contains:** `exposesEntity`: one Data Product links to many CDS entities. This is the \"made of\" link.\n- **What contains it:** `containsProduct`: one business process links to many Data Products.\n- **Links to other products:** `sharesCanonicalObject`: Data Products can be linked to each other through shared business objects (many-to-many).\n- **Declared properties:**\n  - Context: process code, line of business, source application, category.\n  - Size: entity count, association count, cross-product associations.\n  - Centrality: how connected the product is in the catalog.\n\n**What the CDS entities inside are**\nEach CDS entity has a semantic role, a number of fields (\"elements\") and a number of links to other entities (\"associations\"):\n\n\n\nIn short, a Data Product is mostly:\n- **Dimension entities:** master data, about 12 fields each and the most links to other entities.\n- **Text entities:** labels, about 4 fields each.\n- **Fact entities:** transactions and measures. There are fewer of them, but they are the widest at about 28 fields each.\n- **Entities marked \"other\":** they don't have one of the standard roles.\n\nOne caveat: the entity-level view returned 341 CDS entities, while the catalog totals 2,243. The role breakdown above therefore covers only the entities that have detail records, not the whole catalog."
+}

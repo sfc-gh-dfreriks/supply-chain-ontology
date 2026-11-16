@@ -1,0 +1,9 @@
+{
+ "check": "number",
+ "question": "How many plants, customers and suppliers are in the network?",
+ "tools": [
+  "base_query_tool",
+  "system_execute_sql"
+ ],
+ "answer": "There are 19 nodes in the network: **5 plants, 8 customers and 6 suppliers**. These counts come from the network node data.\n\n"
+}

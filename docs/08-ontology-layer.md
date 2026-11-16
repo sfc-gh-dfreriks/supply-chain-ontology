@@ -201,6 +201,22 @@ The metadata answer distinguished `flowsTo` as *abstract* from
 `canSubstituteFor` as *inferred* without being asked to — the distinction the
 layer exists to make.
 
+### The agent searches Business Ontology
+
+`SUPPLY_CHAIN_AGENT` now also has Snowflake Business Ontology search: the `business_ontology` tool, plus read-only ontology reads through `system_execute_sql`, alongside the Analyst and hierarchy tools ([`sql/ontology/11_agent_business_ontology.sql`](../sql/ontology/11_agent_business_ontology.sql)). It reads governed definitions (for example `Supply Chain.Plant`, and the `Data Product` HAS_PART `CDS Entity` edge), cites the `domain.concept` it used, labels each number **Governed**, **Derived** or **Bound table**, and searches the ontology before declining an unknown term. Numbers still come from the semantic views. US regions only: Business Ontology is not available in EU or APAC. In the app it is the panel "The agent looks up the governed meaning before it answers" on Snowflake Ontology Details (`#snowflake`).
+
+| Check | Question | Tools before | Tools after | Result |
+|---|---|---|---|---|
+| definition | What is a Plant in our supply chain model? | `metadata_query_tool`, `get_ancestors_tool`, `system_execute_sql` | `business_ontology`, `system_execute_sql` | Reads the governed Supply Chain.Plant definition instead of the app-owned ONT_* metadata tables. |
+| composition | What is a Data Product made of? | `metadata_query_tool`, `system_execute_sql` | `business_ontology`, `system_execute_sql` | Answers from the governed HAS_PART edge: Data Product has part CDS Entity. |
+| hierarchy | What kinds of material flow are there, and how do they differ? | `ontology_query_tool`, `system_execute_sql` | `ontology_query_tool`, `system_execute_sql` | Unchanged and correct: the class views still answer questions about kinds of material flow. |
+| relations | Which other entities is a Plant connected to, and how? | `metadata_query_tool`, `system_execute_sql` | `metadata_query_tool`, `get_ancestors_tool`, `system_execute_sql` | Unchanged: relation detail still comes from the metadata tool and hierarchy functions. |
+| multi_hop | Who supplies the plants that fulfil our sales orders? List the suppliers by plant. | `base_query_tool`, `system_execute_sql` | `base_query_tool`, `system_execute_sql` | Same answer ($6,661,000 a month inbound) from the base semantic view. |
+| number | How many plants, customers and suppliers are in the network? | `base_query_tool`, `system_execute_sql` | `base_query_tool`, `system_execute_sql` | Same counts (5 plants, 8 customers, 6 suppliers) from the network data. |
+| unknown | What is Widget Velocity Quotient? | none | `business_ontology` | Now searches the ontology before declining. Before, it declined without searching. |
+
+_Table generated from `client/src/data/agent_search.json` (run 2026-11-16, `tools/export_agent_search.py`)._
+
 ### UDTFs cannot be agent function tools
 
 The four traversal tools are **table** functions. A Cortex Agent

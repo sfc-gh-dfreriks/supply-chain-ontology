@@ -1,0 +1,10 @@
+{
+ "check": "hierarchy",
+ "question": "What kinds of material flow are there, and how do they differ?",
+ "tools": [
+  "ontology_query_tool",
+  "system_execute_sql",
+  "system_execute_sql"
+ ],
+ "answer": "There are three kinds of material flow, and the main difference is which end of the network they connect. Inbound flows bring parts from suppliers into plants. Inter-plant flows move product between plants. Outbound flows deliver product from plants to customers. Together the 27 flows are worth $56,691,000 a month. Outbound accounts for 81% of that value, $45,850,000.\n\n\n\n**How they differ:**\n- **Inbound (supplier \u2192 plant):** 12 flows covering 6 material categories, such as Light Sources from Hamamatsu Photonics to San Jose HQ. This kind carries the most units (130 units/month) but is worth only $6,661,000 a month, about $51,000 per unit. It's many lanes of cheaper components.\n- **Inter-plant (plant \u2192 plant):** 4 flows covering 3 categories, such as Sub-assemblies from San Jose HQ to Singapore Hub. This is the smallest kind at $4,180,000 a month, about $85,000 per unit. It's work in progress moving inside the network.\n- **Outbound (plant \u2192 customer):** 11 flows covering 5 categories, such as Die Sorting from Penang Assembly to Texas Instruments. It carries the fewest units (39 units/month) but the most value, $45,850,000 a month, or about $1,176,000 per unit. These are finished tools, so a disruption here costs far more per unit than on the other two kinds.\n\n**Assumptions:**\n- Value per unit is my own calculation: total monthly value divided by total monthly volume for each kind. It's a blended figure across categories, not a governed metric.\n- The units are whatever each flow's monthly volume field counts. They differ by material, so compare unit counts across flow kinds only roughly.\n\nThe flow kinds and their counts come from the ontology layer's material-flow class. The values and volumes come from each flow's own attributes."
+}

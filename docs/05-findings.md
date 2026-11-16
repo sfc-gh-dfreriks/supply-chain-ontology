@@ -368,6 +368,24 @@ the arithmetic exact and the card readable.
 
 ---
 
+## The agent declined without looking
+
+Before Business Ontology search, `SUPPLY_CHAIN_AGENT` answered definition questions from the app-owned `ONT_*` metadata and declined unknown terms ("Widget Velocity Quotient") without searching. With the `business_ontology` tool it reads the governed `Supply Chain.Plant` definition and the `Data Product` HAS_PART `CDS Entity` edge, and searches before declining. The number checks did not move: the same network counts and the same monthly inbound value, from the semantic views. Of the 7 before/after checks, 4 changed tool route; see [08](08-ontology-layer.md#the-agent-searches-business-ontology). US regions only.
+
+| Check | Question | Tools before | Tools after | Result |
+|---|---|---|---|---|
+| definition | What is a Plant in our supply chain model? | `metadata_query_tool`, `get_ancestors_tool`, `system_execute_sql` | `business_ontology`, `system_execute_sql` | Reads the governed Supply Chain.Plant definition instead of the app-owned ONT_* metadata tables. |
+| composition | What is a Data Product made of? | `metadata_query_tool`, `system_execute_sql` | `business_ontology`, `system_execute_sql` | Answers from the governed HAS_PART edge: Data Product has part CDS Entity. |
+| hierarchy | What kinds of material flow are there, and how do they differ? | `ontology_query_tool`, `system_execute_sql` | `ontology_query_tool`, `system_execute_sql` | Unchanged and correct: the class views still answer questions about kinds of material flow. |
+| relations | Which other entities is a Plant connected to, and how? | `metadata_query_tool`, `system_execute_sql` | `metadata_query_tool`, `get_ancestors_tool`, `system_execute_sql` | Unchanged: relation detail still comes from the metadata tool and hierarchy functions. |
+| multi_hop | Who supplies the plants that fulfil our sales orders? List the suppliers by plant. | `base_query_tool`, `system_execute_sql` | `base_query_tool`, `system_execute_sql` | Same answer ($6,661,000 a month inbound) from the base semantic view. |
+| number | How many plants, customers and suppliers are in the network? | `base_query_tool`, `system_execute_sql` | `base_query_tool`, `system_execute_sql` | Same counts (5 plants, 8 customers, 6 suppliers) from the network data. |
+| unknown | What is Widget Velocity Quotient? | none | `business_ontology` | Now searches the ontology before declining. Before, it declined without searching. |
+
+_Table generated from `client/src/data/agent_search.json` (run 2026-11-16, `tools/export_agent_search.py`)._
+
+---
+
 ## Lessons from the ontology layer
 
 > History. The app class model (`ONT_*`/`KG_*`) these describe was replaced by

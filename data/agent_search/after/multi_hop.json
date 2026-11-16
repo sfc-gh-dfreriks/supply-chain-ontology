@@ -1,0 +1,9 @@
+{
+ "check": "multi_hop",
+ "question": "Who supplies the plants that fulfil our sales orders? List the suppliers by plant.",
+ "tools": [
+  "base_query_tool",
+  "system_execute_sql"
+ ],
+ "answer": "Five plants ship to customers: Austin Fab, Dresden Fab, Penang Assembly, San Jose HQ and Singapore Hub. Six suppliers feed them, with inbound supply worth **$6,661,000 a month** in total. San Jose HQ takes the most, with 5 suppliers and $3,142,000 a month.\n\n\n\n**Summary by plant (monthly value):**\n- **San Jose HQ:** $3,142,000 from 5 suppliers: Hamamatsu, Teledyne DALSA, TRUMPF, Coherent and Aerotech.\n- **Austin Fab:** $995,000 from Hamamatsu Photonics and Coherent Corp.\n- **Dresden Fab:** $1,156,000 from TRUMPF Lasertechnik and Teledyne DALSA.\n- **Singapore Hub:** $708,000 from Festo AG and Aerotech Inc.\n- **Penang Assembly:** $660,000, all from Festo AG.\n\n**What stands out:**\n- **Penang Assembly relies on one supplier.** Festo AG is its only source, so a problem at Festo would hit Penang directly.\n- **Every supplier serves at least two plants.** Hamamatsu, Coherent, TRUMPF, Teledyne DALSA, Festo and Aerotech each supply 2 or 3 of the 5 plants. A disruption at any one of them would reach several plants.\n\n**Assumption:** I counted a plant as \"fulfilling sales orders\" if it ships directly to at least one customer. Supply arriving from other plants isn't included, only material bought from external suppliers.\n\nSource: plant, supplier and customer flow data from the base supply-chain model (Cortex Analyst)."
+}

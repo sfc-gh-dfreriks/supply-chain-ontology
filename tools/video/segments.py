@@ -83,6 +83,20 @@ SEGMENTS = [
                    body="Approval, access by domain and full change history. The "
                         "same definitions ground Cortex agents."),
     ),
+    dict(
+        id="03b_agent", page="snowflake",
+        actions=[("scroll_to_text", "The agent looks up the governed meaning"), ("wait", 1500)],
+        narration=(
+            "And the supply chain agent now searches this ontology itself. [[slnc 350]] Ask it what a "
+            "plant is, and it reads the governed definition, not a table it happened to find. "
+            "[[slnc 300]] Numbers still come from the semantic views, [[slnc 250]] and each one is "
+            "labelled governed, derived or bound. [[slnc 300]] Ask about a term the ontology doesn't "
+            "have, and it searches first, then says so, rather than guessing."
+        ),
+        popup=dict(title="The agent searches the ontology", figure="search → read → answer",
+                   body="Governed definitions first, numbers from the bound semantic views, "
+                        "and no invented answers."),
+    ),
 
     # ------------------------------------------------------------ the scenario
     dict(

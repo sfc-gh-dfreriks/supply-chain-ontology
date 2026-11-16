@@ -1,0 +1,6 @@
+{
+ "check": "unknown",
+ "question": "What is Widget Velocity Quotient?",
+ "tools": [],
+ "answer": "\"Widget Velocity Quotient\" isn't a metric I can find in this supply-chain data or in its model. I didn't run a search for it, but the term doesn't match anything the data covers:\n\n- **Network facts:** 19 nodes (5 plants, 6 suppliers, 8 customers) and 27 material flows worth about $56.7M a month.\n- **Plant capacity:** work centres, free hours, utilisation (%) and spare units per month.\n- **Plant inventory:** days of cover and stock value.\n- **Substitution:** which material categories have another source, and which plant pairs can stand in for each other.\n- **Model and catalog details:** classes, relations, 72 declared properties, inference rules, and SAP data products and CDS entities.\n\nIf it's an internal KPI, I'll need its definition to calculate it. If you meant something close, these are available now:\n\n- **Throughput:** monthly flow volume (units per month) or value ($ per month) by lane, plant or customer.\n- **Inventory velocity:** days of inventory by plant (a lower number means stock moves faster).\n- **Capacity headroom:** utilisation (%) and spare units per month by plant.\n\nTell me the formula or which of these is closest, and I'll run it."
+}

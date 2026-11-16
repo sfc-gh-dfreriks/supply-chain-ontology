@@ -1,0 +1,111 @@
+{
+ "agent": "SAP_SUPPLY_CHAIN.ONTOLOGY.SUPPLY_CHAIN_AGENT",
+ "domains": "Supply Chain (primary)",
+ "run_date": "2026-11-16",
+ "note": "Before: the original spec with three Cortex Analyst tools and four hierarchy functions. After: the same tools plus Business Ontology search and read-only ontology reads. Concrete numbers still come from the semantic views.",
+ "rows": [
+  {
+   "check": "definition",
+   "question": "What is a Plant in our supply chain model?",
+   "before_tools": [
+    "metadata_query_tool",
+    "get_ancestors_tool",
+    "system_execute_sql"
+   ],
+   "after_tools": [
+    "business_ontology",
+    "system_execute_sql"
+   ],
+   "before": "In our model, a Plant is a manufacturing site. It is a concrete (non-abstract) class in the supply-chain part of the ontology, and its path up the hierarchy is Plant \u2192 Facility \u2192 Entity.",
+   "after": "In our model, a Plant is a manufacturing site and a kind of Facility. Its capacity (work centres, hours, spare units) and its inventory (days of cover, stock value) are stored as properties of the plant, not as separate entities, because each plant has exactly one of each.",
+   "verdict": "Reads the governed Supply Chain.Plant definition instead of the app-owned ONT_* metadata tables."
+  },
+  {
+   "check": "composition",
+   "question": "What is a Data Product made of?",
+   "before_tools": [
+    "metadata_query_tool",
+    "system_execute_sql"
+   ],
+   "after_tools": [
+    "business_ontology",
+    "system_execute_sql"
+   ],
+   "before": "A Data Product is made of CDS entities. In the model, a Data Product is a business-data-catalog object that \"exposes\" a set of CDS entities, and it sits under one business process.",
+   "after": "A Data Product is made of CDS Entities. In the governed ontology, Supply Chain.Data Product has one active HAS_PART edge, and it points to Supply Chain.CDS Entity.",
+   "verdict": "Answers from the governed HAS_PART edge: Data Product has part CDS Entity."
+  },
+  {
+   "check": "hierarchy",
+   "question": "What kinds of material flow are there, and how do they differ?",
+   "before_tools": [
+    "ontology_query_tool",
+    "system_execute_sql"
+   ],
+   "after_tools": [
+    "ontology_query_tool",
+    "system_execute_sql"
+   ],
+   "before": "There are three kinds of material flow, adding up to 27 lanes. They all have the same fields: material category, monthly value in dollars, monthly volume in units, and a source and target with their locations.",
+   "after": "There are three kinds of material flow, and the main difference is which end of the network they connect. Inbound flows bring parts from suppliers into plants.",
+   "verdict": "Unchanged and correct: the class views still answer questions about kinds of material flow."
+  },
+  {
+   "check": "relations",
+   "question": "Which other entities is a Plant connected to, and how?",
+   "before_tools": [
+    "metadata_query_tool",
+    "system_execute_sql"
+   ],
+   "after_tools": [
+    "metadata_query_tool",
+    "get_ancestors_tool",
+    "system_execute_sql"
+   ],
+   "before": "The ontology model declares 9 relations that touch Plant. Eight involve Plant directly, and one is an abstract parent that Plant inherits from Entity.",
+   "after": "The model links a Plant to six other classes through nine relations. Eight are stored and one is inferred.",
+   "verdict": "Unchanged: relation detail still comes from the metadata tool and hierarchy functions."
+  },
+  {
+   "check": "multi_hop",
+   "question": "Who supplies the plants that fulfil our sales orders? List the suppliers by plant.",
+   "before_tools": [
+    "base_query_tool",
+    "system_execute_sql"
+   ],
+   "after_tools": [
+    "base_query_tool",
+    "system_execute_sql"
+   ],
+   "before": "All five plants ship to customers, and six suppliers feed them. Together the suppliers send $6,661,000 a month into these plants.",
+   "after": "Five plants ship to customers: Austin Fab, Dresden Fab, Penang Assembly, San Jose HQ and Singapore Hub. Six suppliers feed them, with inbound supply worth $6,661,000 a month in total.",
+   "verdict": "Same answer ($6,661,000 a month inbound) from the base semantic view."
+  },
+  {
+   "check": "number",
+   "question": "How many plants, customers and suppliers are in the network?",
+   "before_tools": [
+    "base_query_tool",
+    "system_execute_sql"
+   ],
+   "after_tools": [
+    "base_query_tool",
+    "system_execute_sql"
+   ],
+   "before": "The network has 19 nodes: 5 plants, 8 customers and 6 suppliers. Between them, these nodes are linked by 27 material flows worth about $56,700,000 a month.",
+   "after": "There are 19 nodes in the network: 5 plants, 8 customers and 6 suppliers. These counts come from the network node data.",
+   "verdict": "Same counts (5 plants, 8 customers, 6 suppliers) from the network data."
+  },
+  {
+   "check": "unknown",
+   "question": "What is Widget Velocity Quotient?",
+   "before_tools": [],
+   "after_tools": [
+    "business_ontology"
+   ],
+   "before": "\"Widget Velocity Quotient\" isn't a metric I can find in this supply-chain data or in its model. I didn't run a search for it, but the term doesn't match anything the data covers:  - Network facts: 19 nodes (5 plants, 6 suppliers, 8 customers) and 27 material flows worth about $56.7M a month.",
+   "after": "I couldn't find a governed definition for Widget Velocity Quotient in the Business Ontology. I searched for the exact name twice, then for the broader term \"velocity\", and none of those searches returned a result.",
+   "verdict": "Now searches the ontology before declining. Before, it declined without searching."
+  }
+ ]
+}

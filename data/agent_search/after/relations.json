@@ -1,0 +1,11 @@
+{
+ "check": "relations",
+ "question": "Which other entities is a Plant connected to, and how?",
+ "tools": [
+  "metadata_query_tool",
+  "get_ancestors_tool",
+  "system_execute_sql",
+  "system_execute_sql"
+ ],
+ "answer": "The model links a Plant to **six other classes through nine relations**. Eight are stored and one is inferred. Plant sits under Facility, which sits under Entity, so it also picks up one abstract relation from Entity.\n\n\n\n**Grouped by how they connect:**\n\n| Connected class | Relation (direction) | Cardinality | How it's held |\n|---|---|---|---|\n| Supplier | Supplier **supplies** \u2192 Plant | N:N | Stored |\n| Customer | Plant **shipsTo** \u2192 Customer | N:N | Stored |\n| Plant (another one) | Plant **transfersTo** \u2192 Plant (the path a disruption follows) | N:N | Stored |\n| Plant (another one) | Plant **canSubstituteFor** \u2194 Plant | N:N | **Inferred** by a rule from `produces`, not stored |\n| MaterialCategory | Plant **produces** \u2192 MaterialCategory | N:N | Stored |\n| SalesOrder | SalesOrder **fulfilledBy** \u2192 Plant (reverse: `fulfills`) | N:1 | Stored |\n| Equipment | Equipment **installedAt** \u2192 Plant (reverse: `hasEquipment`) | N:1 | Stored |\n| SystemSerial | SystemSerial **builtAt** \u2192 Plant (reverse: `built`) | N:1 | Stored |\n| Any Entity | **flowsTo**: the abstract parent of supplies, shipsTo and transfersTo | N:N | Abstract, so a traversal can follow any flow type |\n\n**Something to watch:** the written description of `canSubstituteFor` says \"8 pairs today\". The inferred-edge table actually holds **6 edges, which is 3 distinct plant pairs**, because each pair is stored once in each direction. The description looks out of date, so go by the edge table.\n\nThis answer covers the model's structure only. If you want the actual suppliers, customers or lanes for a specific plant, I can pull those from the live supply-chain data."
+}

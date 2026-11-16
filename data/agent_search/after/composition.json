@@ -1,0 +1,9 @@
+{
+ "check": "composition",
+ "question": "What is a Data Product made of?",
+ "tools": [
+  "business_ontology",
+  "system_execute_sql"
+ ],
+ "answer": "A Data Product is made of **CDS Entities**. In the governed ontology, `Supply Chain.Data Product` has one active **HAS_PART** edge, and it points to `Supply Chain.CDS Entity`. Each data product exposes one or more CDS entities, a one-to-many relationship.\n\n**Definition of `Supply Chain.Data Product`**\n- **Kind:** Entity\n- **Definition:** \"A BDC data product exposing CDS entities. A kind of Catalog Object.\"\n- **Synonyms:** DataProduct\n- **Formula:** none (it's an entity, not a metric)\n\n**How it connects to other concepts (all edges are active and the list is complete)**\n\n| Relationship | Related concept | Meaning |\n|---|---|---|\n| HAS_PART (its parts) | `Supply Chain.CDS Entity` | A data product exposes CDS entities (1:N). A CDS entity is a CDS view the data product makes available. |\n| IS_A | `Supply Chain.Catalog Object` | It is one kind of SAP Business Data Cloud catalog object, alongside Business Process and CDS Entity. |\n| HAS_PART (what it belongs to) | `Supply Chain.Business Process` | A business process, such as Design to Operate, contains data products (1:N). |\n\nThe definition also says data products can share a canonical object with each other (many-to-many). That link isn't recorded as an edge in the ontology.\n\n**Context:** Data Product is in the SAP catalog part of the ontology. That part describes what data exists, not the supply chain itself, so it holds no supply-chain values. The ontology links this concept to the view `SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_DATAPRODUCT`. I didn't query it because the question is only about how a data product is built up. If you want counts, such as which data products expose the most CDS entities, I can run them."
+}

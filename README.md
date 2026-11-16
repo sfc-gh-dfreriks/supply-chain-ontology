@@ -7,6 +7,8 @@ Snowflake objects that hold its data. Model a supplier failure or a plant
 outage, watch it ripple through the network, plan the recovery inside real
 capacity, and trace a bad component lot to the customers it reached.
 
+**The agent searches the ontology.** The Cortex agent `SAP_SUPPLY_CHAIN.ONTOLOGY.SUPPLY_CHAIN_AGENT` has Business Ontology search (`business_ontology`, plus read-only ontology reads via `system_execute_sql`) alongside its Analyst and hierarchy tools: it reads governed definitions, cites `domain.concept`, labels numbers Governed / Derived / Bound table and searches before declining unknown terms. Numbers still come from the semantic views; US regions only. Before/after checks: `client/src/data/agent_search.json` ([docs/08](docs/08-ontology-layer.md#the-agent-searches-business-ontology)).
+
 ---
 
 ## How it is built on the ontology

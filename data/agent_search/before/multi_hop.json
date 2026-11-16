@@ -1,0 +1,9 @@
+{
+ "check": "multi_hop",
+ "question": "Who supplies the plants that fulfil our sales orders? List the suppliers by plant.",
+ "tools": [
+  "base_query_tool",
+  "system_execute_sql"
+ ],
+ "answer": "All five plants ship to customers, and six suppliers feed them. Together the suppliers send **$6,661,000 a month** into these plants. Here a \"plant that fulfils sales orders\" means any plant with an outbound flow to a customer.\n\n\n\n**Inbound supply by plant (monthly value):**\n- **San Jose HQ:** 5 suppliers, $3,142,000. This is the most exposed plant: it relies on every supplier except Festo.\n- **Austin Fab:** 2 suppliers (Hamamatsu, Coherent), $995,000.\n- **Dresden Fab:** 2 suppliers (TRUMPF, Teledyne DALSA), $1,156,000.\n- **Singapore Hub:** 2 suppliers (Festo, Aerotech), $708,000.\n- **Penang Assembly:** 1 supplier (Festo), $660,000. Losing Festo would cut off all of Penang's inbound supply.\n\n**Supplier concentration:** each supplier feeds exactly two plants. Hamamatsu is the largest at $1,700,000 a month across Austin and San Jose, followed by Teledyne DALSA at $1,260,000 and TRUMPF at $1,196,000.\n\nThese figures cover direct supplier-to-plant flows only. Plants that get materials through inter-plant transfers aren't credited with the original supplier."
+}

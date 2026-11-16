@@ -13,6 +13,7 @@ Figures come from tools/facts.py.
 """
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -507,6 +508,35 @@ def s08_architecture(prs, X, net, shots):
     footer(s, "Ontology page, screenshot from the running app. Full inventory in 06_Setup_and_Access.")
 
 
+def s08b_agent_search(prs, A):
+    s = blank(prs)
+    slide_header(s, "Ask Cortex", "The agent looks up the governed meaning first")
+    src = Path(A["screenshot"])
+    cached = SHOTS / "agent_search.png"
+    if src.exists():
+        shutil.copy2(src, cached)
+    picture_fit(s, cached, Inches(0.6), Inches(1.72), Inches(7.2), Inches(5.2))
+    rows = {r["check"]: r for r in A["rows"]}
+    text(
+        s, Inches(7.95), Inches(1.85), Inches(4.78), Inches(4.9),
+        [
+            ("BUSINESS ONTOLOGY SEARCH", 9, True, BLUE, 10),
+            ("The Cortex agent now has a business_ontology tool alongside its Analyst "
+             "and hierarchy tools. It cites domain.concept and labels each number "
+             "Governed, Derived or Bound table.", 12, False, NAVY, 14),
+            (f"{A['checks']} BEFORE/AFTER CHECKS", 9, True, BLUE, 10),
+            (f"Definition: {rows['definition']['verdict']}", 11, False, NAVY, 6),
+            (f"Composition: {rows['composition']['verdict']}", 11, False, NAVY, 6),
+            (f"Unknown term: {rows['unknown']['verdict']}", 11, False, NAVY, 6),
+            (f"Numbers: {rows['number']['verdict']}", 11, False, NAVY, 14),
+            ("US REGIONS ONLY", 9, True, BLUE, 10),
+            ("Business Ontology is not available in EU or APAC; numbers still come "
+             "from the semantic views.", 11, False, NAVY, 0),
+        ],
+    )
+    footer(s, f"Snowflake Ontology Details page (#snowflake), run {A['run_date']}. Agent SQL: {A['sql']}.")
+
+
 def s09_real(prs):
     s = blank(prs)
     slide_header(s, "Credibility", "What is real, and what is modelled")
@@ -607,6 +637,7 @@ def main():
     s06_result(prs, shots, hur)
     s07_library(prs, sc, X)
     s08_architecture(prs, X, network, shots)
+    s08b_agent_search(prs, facts.agent_search())
     s09_real(prs)
     s10_ask(prs)
 

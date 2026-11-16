@@ -1,0 +1,10 @@
+{
+ "check": "unknown",
+ "question": "What is Widget Velocity Quotient?",
+ "tools": [
+  "business_ontology",
+  "business_ontology",
+  "business_ontology"
+ ],
+ "answer": "I couldn't find a governed definition for **Widget Velocity Quotient** in the Business Ontology. I searched for the exact name twice, then for the broader term \"velocity\", and none of those searches returned a result.\n\nBecause no definition was found, I haven't swapped in an industry-standard meaning or pulled any data for it.\n\nIf this term goes by another name in your organisation, such as \"inventory turnover\", \"throughput\" or \"days of cover\", tell me and I'll look that up instead. Otherwise, the ontology owner may need to add it as a governed term."
+}
