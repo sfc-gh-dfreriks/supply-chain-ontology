@@ -82,7 +82,7 @@ def name(path: str) -> str:
     decoded back to ":" by the web server serving the build, so the browser's
     request would never match the file written here."""
     p, _, q = path.partition("?")
-    stem = p.lstrip("/").replace("/", "_")
+    stem = re.sub(r"%[0-9A-Fa-f]{2}", "-", p.lstrip("/").replace("/", "_"))
     if not q:
         return f"{stem}.json"
     safe = re.sub(r"[^A-Za-z0-9=&._-]", "-", q)

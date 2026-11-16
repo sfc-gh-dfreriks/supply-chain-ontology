@@ -19,7 +19,9 @@ const SNAP = `${import.meta.env.BASE_URL}data`;
  */
 function snapshotName(pathname: string): string {
   const [p, q] = pathname.split("?");
-  const stem = p.replace(/^\//, "").replace(/\//g, "_");
+  // a percent-escape in the path (a concept name with a space) is folded too: the web
+  // server decodes "%20" in the request, so a filename keeping it would never match
+  const stem = p.replace(/^\//, "").replace(/\//g, "_").replace(/%[0-9A-Fa-f]{2}/g, "-");
   if (!q) return `${stem}.json`;
   return `${stem}__${q.replace(/[^A-Za-z0-9=&._-]/g, "-")}.json`;
 }
