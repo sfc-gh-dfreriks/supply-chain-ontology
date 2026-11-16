@@ -18,6 +18,8 @@ PAGES = [
      "The governed Supply Chain domain: graph, definitions, relationships, representations, history"),
     ("Snowflake Ontology Details", "#snowflake",
      "Snowsight screenshots of the same domain: graph, list, Supplier and Plant nodes, change history"),
+    ("Ask Cortex", "#ask",
+     "Questions across the whole supply chain, answered from the governed domain, operations and every scenario"),
     ("Guided Demo", "#demo", "Seven-step walkthrough of the hurricane scenario"),
     ("Scenario Studio", "#scenario",
      "Build a disruption from five event types; results bucketed by the response each needs"),

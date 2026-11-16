@@ -399,7 +399,7 @@ def s16_deployment(prs):
     s = content(prs, "Deployment options", "Three routes, depending on who is in the room")
     grid(s, [
         ("Public web build", "credential-free, nothing to install — nine presets, AI disabled"),
-        ("Local application", "all eight pages, any disruption, Ask Cortex and the AI briefing"),
+        ("Local application", "all nine pages, any disruption, Ask Cortex and the AI briefing"),
         ("Snowsight", "the governed domain itself, under Business Ontology"),
     ], y0=TOP, rh=0.54)
     card(s, LEFT, TOP + 1.85, FULLW, 1.15, "what is real, and what is modelled", [

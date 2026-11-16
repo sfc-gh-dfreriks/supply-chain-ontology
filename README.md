@@ -62,6 +62,7 @@ In sidebar order; the app opens on Ontology.
 |---|---|
 | **Ontology** | The governed Supply Chain domain: graph, each concept's definition, relationships, representations and change history (with a link to Snowsight), and the table of what the app reads through it |
 | **Snowflake Ontology Details** | Snowsight screenshots of the same domain (graph, list, Supplier and Plant nodes, history), so viewers see where it is defined and approved |
+| **Ask Cortex** | Questions across the whole supply chain, answered from the governed domain, operations, the digital thread and every preset scenario with its recovery plan; suggested questions are pre-answered on the public site |
 | **Guided Demo** | Seven-step walkthrough of the hurricane scenario |
 | **Scenario Studio** | Build a disruption from five event types; results bucketed by the response each needs |
 | **Ripple Map** | Geography and topology side by side, the cascade played one lane at a time |

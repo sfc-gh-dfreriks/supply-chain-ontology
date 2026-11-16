@@ -12,6 +12,7 @@ import { runSql } from "./snowflake.js";
 import { loadNetwork, simulate, type Disruption } from "./scenario.js";
 import { mitigate } from "./mitigate.js";
 import { loadBusinessOntology, boNodeFor } from "./businessOntology.js";
+import { STATIC_PRESETS } from "./presets.js";
 
 const MODEL = process.env.SCENARIO_LLM_MODEL ?? "claude-opus-5-5";
 let _t: any = null;
@@ -93,6 +94,29 @@ function factsFor(topic: string, args: Record<string, any>): unknown {
     }
     case "pulse":
     case "overview": return { operations: operations(), thread: threadSummary().kpi, network: loadNetwork().totals };
+    case "domain": {
+      // Whole-domain context for the Ask Cortex page: the governed model, the
+      // operating picture, and every preset scenario run through the engine.
+      const bo = loadBusinessOntology();
+      const presets = [...operations().presets, ...STATIC_PRESETS].map((p: any) => {
+        const d = { kind: p.kind, targets: p.targets, severity: p.severity, durationDays: p.durationDays } as Disruption;
+        const r = simulate(d), plan = mitigate(r);
+        return { scenario: p.label, totals: r.totals,
+                 impaired: r.impaired.slice(0, 6).map((n: any) => n.node_name),
+                 recovery: plan.totals,
+                 reroutes: plan.reroutes.map((x: any) => `${x.customer}: ${x.fromPlant} -> ${x.toPlant}`),
+                 cannot_reroute: plan.unmitigable.map((x: any) => `${x.material_category} for ${x.customer}: ${x.reason}`) };
+      });
+      return {
+        governed_domain_snowflake_business_ontology: bo ? {
+          domain: bo.domain, counts: bo.counts,
+          concepts: bo.nodes.map((n: any) => ({ name: n.name, definition: String(n.description ?? "").slice(0, 220) })),
+          relationships: bo.relationships.map((r) => `${r.source} -${r.label ?? r.type}-> ${r.target}`),
+        } : null,
+        operations: operations(), thread: threadSummary().kpi, network: loadNetwork().totals,
+        scenarios: presets,
+      };
+    }
     case "class": {
       const name = String(args.class);
       const gov = boNodeFor(loadBusinessOntology(), name);

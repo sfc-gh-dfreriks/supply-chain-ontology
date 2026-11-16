@@ -639,7 +639,7 @@ def build_setup(X, sc, network):
         [
             [
                 "Public web build",
-                "All eight pages and the nine preset scenarios from pre-baked "
+                "All nine pages and the nine preset scenarios from pre-baked "
                 "snapshots. No Ask Cortex, AI briefing or custom disruptions. No "
                 "credentials, no customer data.",
                 "Nothing — open the URL",

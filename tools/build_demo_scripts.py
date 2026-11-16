@@ -528,7 +528,7 @@ def main():
                      f"{X['relationships']} relationships, {X['representations']} representations",
          "**None** — metadata"],
         ["Served artifact", "Three JSON exports found by walking the domain; `npm run refresh`", "Export only"],
-        ["Application", "Node API + React client, eight pages", "Reads the JSON"],
+        ["Application", "Node API + React client, nine pages", "Reads the JSON"],
         ["AI", "AI_COMPLETE (claude-opus-5-5) for briefings and Ask Cortex", "Prompt only"],
     ], [1.75, 3.35, 1.8], size=9, zebra=True)
 

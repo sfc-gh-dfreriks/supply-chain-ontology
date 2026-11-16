@@ -52,6 +52,16 @@ def sim_name(d: dict) -> str:
     return re.sub(r"[^A-Za-z0-9=&._-]", "-", key)
 
 
+DOMAIN_SUGGESTIONS = [
+    "Which single supplier or plant is our biggest point of failure, and why?",
+    "Which preset scenario costs the most, and how much of it can we recover?",
+    "Where would one more unit of capacity protect the most revenue?",
+    "Which customers are exposed in more than one scenario?",
+    "What does the ontology say a Plant is, and how does the app use it?",
+    "What should we act on first this week?",
+]
+
+
 def ask_key(topic: str, args: dict) -> str:
     """Key for a baked Ask Cortex answer. Must stay identical to askKey() in
     client/src/lib/api.ts: sorted args, a disruption keyed by sim_name()."""
@@ -157,7 +167,10 @@ def main() -> None:
     # Ask Cortex answers come from POST /ask-cortex (AI_COMPLETE). Bake the
     # default (no question) answer for each view a reader lands on; follow-up
     # questions need the live app.
-    asks = [("pulse", {}), ("thread", {}), ("equipment", {})]
+    asks = [("pulse", {}), ("thread", {}), ("equipment", {}), ("domain", {})]
+    # The Ask Cortex page's suggested questions. Keep identical to
+    # DOMAIN_SUGGESTIONS in client/src/pages/AskCortexPage.tsx.
+    asks += [("domain", {"question": q}) for q in DOMAIN_SUGGESTIONS]
     if serials:
         asks.append(("serial", {"serial": serials[0]}))
     asks += [("lot", {"lot": l["lot_id"]}) for l in summary["lots"]
@@ -173,7 +186,8 @@ def main() -> None:
         topic, args = item
         req = urllib.request.Request(
             HOST + "/api/ask-cortex",
-            data=json.dumps({"topic": topic, "args": args}).encode(),
+            data=json.dumps({"topic": topic, "args": args,
+                             "question": args.get("question", "")}).encode(),
             headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=180) as r:
             return ask_key(topic, args), json.load(r)["text"]

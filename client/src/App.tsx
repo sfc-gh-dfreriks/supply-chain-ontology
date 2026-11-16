@@ -5,6 +5,7 @@ import { api } from "./lib/api";
 import Overview from "./pages/Overview";
 import OntologyModel from "./pages/OntologyModel";
 import SnowflakeOntology from "./pages/SnowflakeOntology";
+import AskCortexPage from "./pages/AskCortexPage";
 import Demo from "./pages/Demo";
 import ScenarioStudio from "./pages/ScenarioStudio";
 import RippleMap from "./pages/RippleMap";
@@ -16,6 +17,7 @@ import { OperationsPulse } from "./components/OperationsPulse";
 const TITLES: Record<PageId, string> = {
   model: "Ontology — the governed Supply Chain domain",
   snowflake: "Snowflake Ontology Details — the domain inside Snowsight",
+  ask: "Ask Cortex — questions across the whole supply chain",
   demo: "Guided Demo",
   scenario: "Scenario Studio",
   ripple: "Ripple Map — geography and topology",
@@ -62,6 +64,7 @@ export default function App() {
       case "thread": return <DigitalThread />;
       case "model": return <OntologyModel />;
       case "snowflake": return <SnowflakeOntology />;
+      case "ask": return <AskCortexPage />;
       case "demo": return <Demo onNavigate={setPage} />;
       case "scenario": return <ScenarioStudio />;
       case "ripple": return <RippleMap />;
