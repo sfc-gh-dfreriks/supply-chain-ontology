@@ -23,6 +23,7 @@ OUT = ROOT / "client/src/data/agent_search.json"
 SNAP = ROOT / "data/agent_search"
 
 def first(text, n=2):
+    text = text.split("\n|")[0]  # stop at a markdown table
     text = re.sub(r"\*\*|`|#+ ", "", text).replace("\n", " ")
     # the agent sometimes emits its planning note glued to the answer ("...synonym.A Legal Entity ...")
     glued = [m.end() for m in re.finditer(r"[a-z\"]\.(?<!Enterprise\.)(?<!Chain\.)(?<!Capital\.)(?=[A-Z])", text[:200])]
@@ -30,7 +31,8 @@ def first(text, n=2):
         text = text[glued[-1]:]
     text = re.sub(r"(?<=[:.])\s*\d+\.\s+", " ", text)  # inline numbered lists
     parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    return " ".join(parts[:n])[:360]
+    out = " ".join(parts[:n])[:360].rstrip()
+    return out[:-1] + "." if out.endswith(":") else out
 
 def main():
     if len(sys.argv) > 1:  # refresh the snapshot from a retrofit folder: <before dir> <after dir>
