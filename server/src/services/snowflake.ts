@@ -37,11 +37,12 @@ function connect(): Promise<snowflake.Connection> {
 
 const MAX_ROWS = 500;
 
-export async function runSql(sql: string): Promise<{ columns: string[]; rows: unknown[][] }> {
+export async function runSql(sql: string, binds: snowflake.Binds = []): Promise<{ columns: string[]; rows: unknown[][] }> {
   const conn = await connect();
   return new Promise((resolve, reject) => {
     conn.execute({
       sqlText: sql,
+      binds,
       complete: (err, stmt, rows) => {
         if (err) return reject(err);
         const cols = (stmt.getColumns() ?? []).map((c) => c.getName());

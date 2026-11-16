@@ -13,7 +13,7 @@ import { AskCortex } from "../components/AskCortex";
  * optimizer, so it is auditable. The agent reasons over those numbers and answers
  * follow-ups, but it is never the source of a figure.
  */
-export default function Mitigation() {
+export default function Mitigation({ onNavigate }: { onNavigate?: (p: "execute") => void } = {}) {
   const { net } = useNetwork();
   const { disruption, result, plan } = useScenario();
 
@@ -265,6 +265,21 @@ export default function Mitigation() {
           ))}
         </ol>
       </div>
+
+      {/* execute: the governed writeback lives on its own page */}
+      {plan.reroutes.length > 0 && onNavigate && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-indigo-200 bg-white px-4 py-3">
+          <div className="text-xs text-slate-600">
+            <span className="font-semibold uppercase tracking-wide text-indigo-700">Ready to act? </span>
+            Turn these {plan.reroutes.length} reroute{plan.reroutes.length === 1 ? "" : "s"} into SAP S/4HANA changes,
+            governed by Business Ontology Actions and a second-person approval.
+          </div>
+          <button onClick={() => onNavigate("execute")}
+            className="rounded bg-indigo-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-800">
+            Execute in S/4HANA →
+          </button>
+        </div>
+      )}
 
       {/* AI */}
       {STATIC ? (

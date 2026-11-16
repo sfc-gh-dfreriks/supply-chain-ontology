@@ -1,6 +1,6 @@
-import { LayoutDashboard, PlayCircle, CloudLightning, Globe2, Wrench, Layers, Cable, Snowflake, Sparkles } from "lucide-react";
+import { LayoutDashboard, PlayCircle, CloudLightning, Globe2, Wrench, Layers, Cable, Snowflake, Sparkles, ShieldCheck } from "lucide-react";
 
-export type PageId = "overview" | "model" | "snowflake" | "ask" | "demo" | "scenario" | "ripple" | "mitigation" | "thread";
+export type PageId = "overview" | "model" | "snowflake" | "ask" | "demo" | "scenario" | "ripple" | "mitigation" | "execute" | "thread";
 
 // Every page runs on the governed Supply Chain domain in Snowflake Business
 // Ontology: the Ontology page shows it, and the scenario and thread pages walk
@@ -14,6 +14,7 @@ const NAV: { id: PageId; label: string; icon: any }[] = [
   { id: "scenario", label: "Scenario Studio", icon: CloudLightning },
   { id: "ripple", label: "Ripple Map", icon: Globe2 },
   { id: "mitigation", label: "Mitigation & Recovery", icon: Wrench },
+  { id: "execute", label: "Execute in S/4HANA", icon: ShieldCheck },
   { id: "thread", label: "Digital Thread", icon: Cable },
 ];
 

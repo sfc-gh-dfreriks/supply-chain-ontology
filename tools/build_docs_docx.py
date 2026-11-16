@@ -48,6 +48,7 @@ SOURCES = [
     ("docs/06-references.md",       "References",            "06"),
     ("docs/07-scenario-modelling.md", "Scenario modelling",  "07"),
     ("docs/08-ontology-layer.md",   "Ontology layer",        "08"),
+    ("docs/09-s4-writeback.md",     "S4HANA writeback",      "09"),
 ]
 
 MONO = "Consolas"

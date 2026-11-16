@@ -11,6 +11,7 @@ import ScenarioStudio from "./pages/ScenarioStudio";
 import RippleMap from "./pages/RippleMap";
 import OptimizeMap from "./pages/OptimizeMap";
 import Mitigation from "./pages/Mitigation";
+import ExecuteS4 from "./pages/ExecuteS4";
 import DigitalThread from "./pages/DigitalThread";
 import { OperationsPulse } from "./components/OperationsPulse";
 
@@ -23,6 +24,7 @@ const TITLES: Record<PageId, string> = {
   scenario: "Scenario Studio",
   ripple: "Ripple Map — geography and topology",
   mitigation: "Mitigation & Recovery",
+  execute: "Execute in S/4HANA — governed writeback of the recovery plan",
   thread: "Digital Thread — orders, systems, lots and tools",
 };
 
@@ -70,7 +72,8 @@ export default function App() {
       case "ripple": return <RippleMap />;
       case "mitigation": return (<>
         <OptimizeMap />
-        <div className="mt-6"><Mitigation /></div></>);
+        <div className="mt-6"><Mitigation onNavigate={setPage} /></div></>);
+      case "execute": return <ExecuteS4 onNavigate={setPage} />;
     }
   };
 

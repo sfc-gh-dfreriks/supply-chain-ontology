@@ -14,6 +14,7 @@ than a blank page, so the set below is the contract for what the public build
 can do.
 
 Run the app first (npm run dev), then:  python3 tools/bake_static.py
+(--only-writeback re-bakes just the S/4HANA writeback example, leaving the rest.)
 """
 import json
 import pathlib
@@ -97,6 +98,44 @@ def bake(path: str, data=None) -> int:
     return f.stat().st_size
 
 
+def bake_writeback() -> int:
+    """S/4HANA writeback for the public build: the Action contracts plus one change
+    request captured at two stages (raised, then approved and posted), run for the
+    hurricane preset and reversed afterwards so the simulated S/4HANA is left as
+    seeded. The public page shows them read-only; posting needs the live app."""
+    def call(path, body):
+        req = urllib.request.Request(HOST + "/api" + path, data=json.dumps(body).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=300) as r:
+            return json.load(r)
+
+    total = bake("/writeback/actions")
+    d = {"kind": "weather", "targets": ["PLT-2000"], "severity": 1, "durationDays": 60,
+         "label": "Hurricane — Austin Fab offline"}
+    call("/writeback/reset", {})
+    proposed = call("/writeback/propose", {"disruption": d, "requestedBy": "Maria Chen (Supply Planner)"})
+    cr = proposed["cr_id"]
+    call(f"/writeback/cr/{cr}/decide", {
+        "disruption": d, "decision": "APPROVE", "approver": "Raj Patel (Operations Director)",
+        "acknowledgements": [a["id"] for a in proposed["acknowledgements"]],
+        "confirmation": proposed["confirmationPhrase"],
+        "comment": "Approved for hurricane recovery; customers notified by account teams."})
+    posted = call(f"/writeback/cr/{cr}/post", {"disruption": d})
+    call(f"/writeback/cr/{cr}/reverse", {"by": "Raj Patel (Operations Director)"})
+    call("/writeback/reset", {})
+    # the public site must not carry the account's login or admin role: keep the shape, replace the values
+    def scrub(cr):
+        for k in ("snowflake_user",):
+            if k in cr:
+                cr[k] = "APP_SERVICE_USER"
+        for a in cr.get("approvals", []):
+            a["snowflake_user"], a["snowflake_role"] = "APP_SERVICE_USER", "SC_RECOVERY_APPROVER"
+        return cr
+    total += bake("/writeback/example", {"proposed": scrub(proposed), "posted": scrub(posted)})
+    print(f"  baked writeback actions and example {cr} ({posted['status']}, {len(posted['outbox'])} OData calls)")
+    return total
+
+
 def main() -> None:
     try:
         fetch("/health")
@@ -104,6 +143,9 @@ def main() -> None:
         sys.exit(f"server not reachable at {HOST} — start it with `npm run dev`\n  {e}")
 
     OUT.mkdir(parents=True, exist_ok=True)
+    if "--only-writeback" in sys.argv:
+        bake_writeback()
+        return
     for old in OUT.glob("*.json"):
         old.unlink()
 
@@ -163,6 +205,7 @@ def main() -> None:
     for sn in serials:
         total += bake(f"/thread/serial/{urllib.parse.quote(sn)}")
     print(f"  baked thread, operations and {len(serials)} serial traces")
+    total += bake_writeback()
 
     # Ask Cortex answers come from POST /ask-cortex (AI_COMPLETE). Bake the
     # default (no question) answer for each view a reader lands on; follow-up

@@ -68,6 +68,12 @@ const STEPS: StepDef[] = [
     why: "The AI reads the figures the simulation produced and explains the trade-off. It "
        + "is not allowed to calculate them, so the numbers stay auditable.",
     page: "mitigation", pageLabel: "Mitigation · AI briefing", goLabel: "Generate a briefing" },
+  { id: "execute", kicker: "Step 8", title: "Execute it in S/4HANA, with a human in the loop",
+    why: "The plan becomes S/4HANA changes: two sales order items moved to San Jose and two planned "
+       + "orders created. Each is a governed Action in the ontology, every criterion is checked, and "
+       + "nothing posts until a second person acknowledges they are changing the system of record. "
+       + "The S/4HANA system is simulated in Snowflake.",
+    page: "execute", pageLabel: "Execute in S/4HANA", goLabel: "Open Execute in S/4HANA" },
 ];
 
 export default function Demo({ onNavigate }: { onNavigate?: (p: PageId) => void }) {

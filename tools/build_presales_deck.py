@@ -396,6 +396,33 @@ def s06_result(prs, shots, hur):
     footer(s, "The plan relocates the risk rather than removing it. Saying so is the credibility of the whole exercise.")
 
 
+def s06b_writeback(prs, Wb):
+    s = blank(prs)
+    slide_header(s, "Execute", "From recovery plan to S/4HANA, with a human in the loop")
+    src = Path(Wb["screenshot"])
+    cached = SHOTS / "writeback_process.png"
+    if src.exists():
+        shutil.copy2(src, cached)
+    picture_fit(s, cached, Inches(0.6), Inches(1.72), Inches(7.2), Inches(5.2))
+    text(
+        s, Inches(7.95), Inches(1.85), Inches(4.78), Inches(4.9),
+        [
+            ("BUSINESS ONTOLOGY ACTIONS", 9, True, BLUE, 10),
+            ("Each S/4HANA change is a governed Action: " + ", ".join(a["name"] for a in Wb["actions"]) +
+             ". The contract names its criteria, effects and the one procedure that may run it.", 12, False, NAVY, 14),
+            (f"HURRICANE CHANGE REQUEST", 9, True, BLUE, 10),
+            (f"{Wb['sales_order_items']} sales order items moved to another plant, {Wb['planned_orders']} planned orders "
+             f"created; {Wb['odata_calls']} OData calls and {Wb['change_documents']} change documents.", 11, False, NAVY, 14),
+            ("GOVERNANCE", 9, True, BLUE, 10),
+            ("Second-person approval with acknowledgements and POST TO S4HANA; approver role in "
+             "Snowflake; procedures refuse anything not approved; every change reversible.", 11, False, NAVY, 14),
+            ("SIMULATED S/4HANA", 9, True, BLUE, 10),
+            ("S/4HANA is modelled in Snowflake; the OData calls are real-shaped, not sent.", 11, False, NAVY, 0),
+        ],
+    )
+    footer(s, f"Execute in S/4HANA page (#execute). SQL: {Wb['sql']}; checks: {Wb['test']}.")
+
+
 def s07_library(prs, sc, X):
     s = blank(prs)
     sc = [x for x in sc if not x["id"].startswith("ops-")]
@@ -555,15 +582,18 @@ def s09_real(prs):
         ("Inventory buffer days", "Real — material stock data", GREEN),
         ("Which plant can substitute for another", "Derived from observed shipments", RGBColor(0xB4, 0x6A, 0x00)),
         ("Hours consumed per unit", "Derived, planning-grade, blended across products", RGBColor(0xB4, 0x6A, 0x00)),
+        ("S/4HANA posting (Execute page)", "Simulated in Snowflake — real-shaped OData, not sent", RGBColor(0xB4, 0x6A, 0x00)),
         ("Qualification time for a plant change", "Not modelled", RED),
     ]
     y = Inches(2.35)
     for i, (element, status, color) in enumerate(rows):
-        rect(s, Inches(0.6), y, Inches(12.13), Inches(0.56), LIGHT if i % 2 == 0 else WHITE)
-        rect(s, Inches(0.6), y, Inches(0.05), Inches(0.56), color)
-        text(s, Inches(0.85), y + Inches(0.15), Inches(5.2), Inches(0.3), [(element, 12, True, NAVY, 0)])
-        text(s, Inches(6.2), y + Inches(0.15), Inches(6.4), Inches(0.3), [(status, 12, False, color, 0)])
-        y += Inches(0.6)
+        # row pitch shrinks with the row count so the table always clears the footer
+        pitch = min(0.6, 4.55 / len(rows))
+        rect(s, Inches(0.6), y, Inches(12.13), Inches(pitch - 0.04), LIGHT if i % 2 == 0 else WHITE)
+        rect(s, Inches(0.6), y, Inches(0.05), Inches(pitch - 0.04), color)
+        text(s, Inches(0.85), y + Inches(pitch / 2 - 0.15), Inches(5.2), Inches(0.3), [(element, 12, True, NAVY, 0)])
+        text(s, Inches(6.2), y + Inches(pitch / 2 - 0.15), Inches(6.4), Inches(0.3), [(status, 12, False, color, 0)])
+        y += Inches(pitch)
     footer(s, "The application states this on screen, and the customer-facing management summary carries the same table.")
 
 
@@ -635,6 +665,7 @@ def main():
     s04_ripple(prs, shots, hur, byc)
     s05_mitigation(prs, shots, hur)
     s06_result(prs, shots, hur)
+    s06b_writeback(prs, facts.writeback())
     s07_library(prs, sc, X)
     s08_architecture(prs, X, network, shots)
     s08b_agent_search(prs, facts.agent_search())

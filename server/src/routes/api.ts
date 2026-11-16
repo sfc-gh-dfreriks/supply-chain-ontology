@@ -7,6 +7,7 @@ import { mitigate } from "../services/mitigate.js";
 import { explain, interrogate, reasoningConfigured } from "../services/reason.js";
 import { threadSummary, serialTrace, askCortex, operations } from "../services/thread.js";
 import { STATIC_PRESETS } from "../services/presets.js";
+import * as writeback from "../services/writeback.js";
 
 // Every route serves data that was exported through Snowflake Business Ontology:
 // the governed "Supply Chain" domain itself (/api/bo/*), the scenario network built
@@ -172,6 +173,62 @@ apiRouter.get("/api/scenario/presets", wrap((_req, res) => {
     ...operations().presets.map((p: any) => ({ ...p, source: "sc360" })),
     ...STATIC_PRESETS,
   ]);
+}));
+
+// ---------------------------------------------------------------- S/4HANA writeback
+// Governed execution of the recovery plan. The plan is always recomputed from the
+// disruption on the server; the browser only names the scenario and the people.
+function wrapWriteback(handler: (req: any, res: any) => Promise<void>) {
+  return (req: any, res: any) => {
+    handler(req, res).catch((e: any) =>
+      res.status(e?.status ?? 500).json({ error: String(e?.message || e) }));
+  };
+}
+
+function planFor(body: any) {
+  const { d, error } = parseDisruption(body?.disruption ?? {});
+  if (!d) throw Object.assign(new Error(error), { status: 400 });
+  return { d, plan: mitigate(simulate(d)) };
+}
+
+const person = (v: unknown) => String(v ?? "").trim().slice(0, 120);
+
+apiRouter.get("/api/writeback/actions", wrapWriteback(async (_req, res) => {
+  res.json(await writeback.actions());
+}));
+
+apiRouter.post("/api/writeback/propose", wrapWriteback(async (req, res) => {
+  const { d, plan } = planFor(req.body);
+  const requestedBy = person(req.body?.requestedBy);
+  if (!requestedBy) { res.status(400).json({ error: "requestedBy is required" }); return; }
+  res.json(await writeback.propose(plan, d.label ?? `${d.kind}: ${d.targets.join(", ")}`, requestedBy));
+}));
+
+apiRouter.get("/api/writeback/cr/:id", wrapWriteback(async (req, res) => {
+  res.json(await writeback.changeRequest(String(req.params.id)));
+}));
+
+apiRouter.post("/api/writeback/cr/:id/decide", wrapWriteback(async (req, res) => {
+  const { plan } = planFor(req.body);
+  const decision = req.body?.decision === "REJECT" ? "REJECT" : "APPROVE";
+  res.json(await writeback.decide(String(req.params.id), plan, {
+    decision, approver: person(req.body?.approver),
+    acknowledgements: Array.isArray(req.body?.acknowledgements) ? req.body.acknowledgements.map(String) : [],
+    confirmation: String(req.body?.confirmation ?? ""), comment: String(req.body?.comment ?? "").slice(0, 1000),
+  }));
+}));
+
+apiRouter.post("/api/writeback/cr/:id/post", wrapWriteback(async (req, res) => {
+  const { plan } = planFor(req.body);
+  res.json(await writeback.post(String(req.params.id), plan));
+}));
+
+apiRouter.post("/api/writeback/cr/:id/reverse", wrapWriteback(async (req, res) => {
+  res.json(await writeback.reverse(String(req.params.id), person(req.body?.by) || "demo reset"));
+}));
+
+apiRouter.post("/api/writeback/reset", wrapWriteback(async (_req, res) => {
+  res.json(await writeback.resetDemo());
 }));
 
 // ---------------------------------------------------------------- digital thread

@@ -7,11 +7,11 @@ export default defineConfig({
   base: process.env.BASE_PATH || "/",
   plugins: [react()],
   server: {
-    port: 5179,
+    port: Number(process.env.CLIENT_PORT) || 5179,
     strictPort: true,
     proxy: {
       "/api": {
-        target: "http://localhost:3009",
+        target: `http://localhost:${process.env.API_PORT || 3009}`,
         changeOrigin: true,
       },
     },

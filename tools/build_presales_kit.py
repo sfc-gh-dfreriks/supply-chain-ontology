@@ -114,6 +114,40 @@ def title_block(doc, title, subtitle, strap):
 # ---------------------------------------------------------------- START HERE
 
 
+def writeback_section(doc, W):
+    """Execute in S/4HANA: Action nodes plus governance, from facts.writeback()."""
+    h1(doc, "Executing the recovery in S/4HANA")
+    body(
+        doc,
+        "The Execute in S/4HANA page (#execute) turns the recovery plan into S/4HANA document "
+        "changes. Each change is performed by a Business Ontology Action node in the Supply Chain "
+        "domain, whose contract names its parameters, criteria, effects and the procedure that runs "
+        "it. The app checks every criterion, a second person approves, and only the named "
+        "procedures write. " + W["simulated"],
+    )
+    table(
+        doc,
+        ["Action", "Acts on", "Kind", "Runs via"],
+        [[a["name"], a["acts_on"], a["kind"], a["target"].split(".")[-1]] for a in W["actions"]],
+        [2.0, 1.1, 1.3, 2.6],
+        size=8,
+    )
+    body(doc, f"For the {W['scenario']} preset the change request {W['cr_id']} carries {W['items']} changes:")
+    for c in W["changes"]:
+        bullet(doc, c)
+    body(doc, f"Posting it sends {W['odata_calls']} OData calls and writes {W['change_documents']} change "
+              f"documents. Requested by {W['requester']}, approved by {W['approver']}. Governance, enforced in Snowflake:")
+    for g in W["guards"]:
+        bullet(doc, g)
+    body(
+        doc,
+        f"Demo it: run the hurricane preset, open Mitigation & Recovery, click Execute in S/4HANA, raise the "
+        f"request, try to approve as the requester (blocked), approve as someone else, post, then reverse. "
+        f"SQL: {W['sql']}; checks: {W['test']}.",
+        italic=True,
+    )
+
+
 def agent_search_section(doc, A):
     """Short section + before/after table, from facts.agent_search()."""
     h1(doc, "The agent searches the governed ontology")
@@ -563,6 +597,7 @@ def build_quick_start(X, sc, network):
     )
 
     agent_search_section(doc, facts.agent_search())
+    writeback_section(doc, facts.writeback())
 
     h1(doc, "Discovery questions")
     body(doc, "Ask these before you demo. They tell you which scenario to run and whether this qualifies.")
@@ -774,6 +809,7 @@ def build_setup(X, sc, network):
     )
 
     agent_search_section(doc, facts.agent_search())
+    writeback_section(doc, facts.writeback())
 
     h1(doc, "Refreshing")
     body(

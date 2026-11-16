@@ -206,6 +206,22 @@ def main():
          "adjustable from 1.5 to 20 seconds per step, so the same screen serves a two-minute "
          "executive walkthrough and a half-hour working session.", size=9.5)
 
+    # ---- acting on the plan --------------------------------------------
+    Wb = facts.writeback()
+    h1(doc, "Acting on the plan in S/4HANA")
+    body(doc,
+         "A plan is only useful if it can be carried out. The Execute in S/4HANA page turns the "
+         f"reroutes into S/4HANA document changes: for the hurricane, {Wb['sales_order_items']} sales "
+         f"order items move to San Jose and {Wb['planned_orders']} planned orders are created there. "
+         "Each change is a governed Action in the Supply Chain ontology, whose contract says what it "
+         "needs, when it is allowed and what it changes, so the business rule lives with the data "
+         "definitions rather than in code.")
+    body(doc,
+         "Nothing reaches the system of record without a second person. The approver must hold the "
+         "approver role, cannot be the person who raised the request, and must acknowledge in "
+         "writing that they are changing live transactional data. Every change is recorded as an "
+         f"S/4 change document under their name and can be reversed. {Wb['simulated']}", size=9.5)
+
     h1(doc, "Scenario library")
     body(doc,
          f"{len(scen)} core scenarios ship ready to run, plus three drawn from the operations pulse. The spread matters: some disruptions are largely "
@@ -388,6 +404,9 @@ def main():
          "than scheduling"],
         ["Qualification and approval time for a plant change",
          "**Not modelled.** A reroute the tool calls feasible may still take weeks to authorise."],
+        ["Posting the plan to S/4HANA",
+         "**Simulated.** The governance and Action contracts are real; the S/4HANA system and its "
+         "OData calls are modelled in Snowflake."],
         ["Component-level shortages inside a plant",
          "**Not modelled.** The bill of materials is available if this is taken further."],
     ]

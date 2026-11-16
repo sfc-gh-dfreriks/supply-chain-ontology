@@ -66,10 +66,11 @@ In sidebar order; the app opens on Ontology.
 | **Executive Dashboard** | Operations pulse (OTIF, late cost, operating rate, tool risk, component cover per plant), the governed domain, and the network the scenarios run on |
 | **Snowflake Ontology Details** | Snowsight screenshots of the same domain (graph, list, Supplier and Plant nodes, history), so viewers see where it is defined and approved |
 | **Ask Cortex** | Questions across the whole supply chain, answered from the governed domain, operations, the digital thread and every preset scenario with its recovery plan; suggested questions are pre-answered on the public site |
-| **Guided Demo** | Seven-step walkthrough of the hurricane scenario |
+| **Guided Demo** | Eight-step walkthrough of the hurricane scenario, ending in the governed S/4HANA writeback |
 | **Scenario Studio** | Build a disruption from five event types; results bucketed by the response each needs |
 | **Ripple Map** | Geography and topology side by side, the cascade played one lane at a time |
-| **Mitigation & Recovery** | The recovery as a movie, one beat per reroute, then the plan: reroutes inside real capacity (old lanes red, new lanes dashed green), what cannot be saved and why, **Execute in S/4HANA** (governed by Action nodes, with second-person approval), plus an AI you can interrogate |
+| **Mitigation & Recovery** | The recovery as a movie, one beat per reroute, then the plan: reroutes inside real capacity (old lanes red, new lanes dashed green), what cannot be saved and why, plus an AI you can interrogate |
+| **Execute in S/4HANA** | The plan as S/4HANA document changes: the Business Ontology Action contracts, a change request with every criterion checked, a second-person approval acknowledging the transactional change, then the OData calls and change documents S/4 received |
 | **Digital Thread** | Orders, built systems, component lots and tools: "which customers did this bad lot reach?" answered by walking the governed relationships |
 | **Ask Cortex** (most pages) | A grounded AI_COMPLETE reading of the view on screen, citing the governed definitions |
 
@@ -158,7 +159,7 @@ it instead.
 
 ## Executing the recovery in S/4HANA (Action nodes)
 
-Mitigation & Recovery can carry its reroutes through to SAP S/4HANA, governed by
+The **Execute in S/4HANA** page carries the Mitigation & Recovery reroutes through to SAP S/4HANA, governed by
 **Action nodes** in the Supply Chain domain (the pattern in *Ontology Execution
 and Writeback*): the ontology holds each operation's contract, the app checks it,
 and only the procedure the contract names writes.

@@ -1,0 +1,416 @@
+-- S/4HANA writeback for the Mitigation & Recovery plan.
+--
+-- The recovery plan proposes reroutes: move a material category for a customer
+-- from a failed plant to a plant with spare capacity. In S/4HANA that is two
+-- transactional changes per reroute:
+--   1. Reassign Delivering Plant  - PATCH A_SalesOrderItem.ProductionPlant
+--                                   (VBAP-WERKS) on the customer's open items
+--   2. Create Planned Order       - POST A_PlannedOrder at the receiving plant
+--
+-- This schema SIMULATES the S/4HANA system (S4H, client 100): mirror tables for
+-- the documents, change documents shaped like CDHDR/CDPOS, and an outbox holding
+-- the OData call S/4 would receive with a simulated response. Nothing here
+-- connects to a real S/4HANA system.
+--
+-- Governance follows the Action-node pattern: the Business Ontology holds each
+-- operation's contract, the app checks the criteria, and these procedures are
+-- the only way to write. Every write needs an APPROVED change request, so a
+-- procedure called directly, bypassing the app, still refuses.
+--
+--   DRAFT --propose--> SUBMITTED --approve--> APPROVED --post--> POSTED --reverse--> REVERSED
+--                               \--reject--> REJECTED
+
+CREATE SCHEMA IF NOT EXISTS SAP_SUPPLY_CHAIN.S4_WRITEBACK
+  COMMENT = 'SIMULATED S/4HANA (S4H client 100) writeback target for the recovery plan: document mirrors, change documents, OData outbox, change requests and approvals.';
+USE SCHEMA SAP_SUPPLY_CHAIN.S4_WRITEBACK;
+
+-- ---------------------------------------------------------------- roles
+CREATE ROLE IF NOT EXISTS SC_RECOVERY_PLANNER COMMENT = 'May propose recovery change requests against S/4HANA.';
+CREATE ROLE IF NOT EXISTS SC_RECOVERY_APPROVER COMMENT = 'May approve and post recovery change requests to S/4HANA.';
+GRANT ROLE SC_RECOVERY_PLANNER TO ROLE SC_RECOVERY_APPROVER;
+GRANT ROLE SC_RECOVERY_APPROVER TO ROLE ACCOUNTADMIN;  -- demo: the app's service role holds both
+
+-- ---------------------------------------------------------------- master data
+CREATE OR REPLACE TABLE S4_PLANT (            -- T001W
+  WERKS STRING PRIMARY KEY, NAME1 STRING, NODE_ID STRING);
+INSERT INTO S4_PLANT
+  SELECT PROPS:PROPS:PLANT::STRING, ENTITY_NAME, ENTITY_ID FROM SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_PLANT;
+
+CREATE OR REPLACE TABLE S4_MATERIAL (         -- MARA/MAKT plus the category the network plans by
+  MATNR STRING PRIMARY KEY, MAKTX STRING, MATERIAL_CATEGORY STRING, IS_PRIMARY BOOLEAN)
+  COMMENT = 'Demo mapping of materials to the network''s material categories, assigned from the material descriptions.';
+INSERT INTO S4_MATERIAL VALUES
+  ('MAT-1001','KLA 8935 Wafer Inspection System','Inspection Systems', TRUE),
+  ('MAT-1003','Surfscan SP7XP','Inspection Systems', FALSE),
+  ('MAT-1007','Puma 9980 Laser Scanning','Inspection Systems', FALSE),
+  ('MAT-1008','Kronos 1190 WI Patterned Inspection','Inspection Systems', FALSE),
+  ('MAT-1005','Archer 750 Overlay Metrology','Metrology', TRUE),
+  ('MAT-1002','KLA eSL10 e-Beam Review','E-Beam Review', TRUE),
+  ('MAT-1004','ICOS F160 Die Sorter','Die Sorting', TRUE),
+  ('MAT-1006','Candela CS920 Surface Analyzer','Surface Analysis', TRUE);
+
+-- ---------------------------------------------------------------- transactional mirrors
+CREATE OR REPLACE TABLE S4_SALES_ORDER_ITEM (  -- VBAP (with the sold-to name for readability)
+  VBELN STRING, POSNR NUMBER, SOLD_TO STRING, MATNR STRING, WERKS STRING,
+  KWMENG NUMBER, NETWR_USD NUMBER(14,2), REQ_SHIP_DATE DATE,
+  STATUS STRING,                              -- OPEN | DELIVERED | REJECTED
+  CHANGED_BY STRING, CHANGED_AT TIMESTAMP_LTZ,
+  PRIMARY KEY (VBELN, POSNR));
+
+CREATE OR REPLACE TABLE S4_PLANNED_ORDER (     -- PLAF
+  PLNUM STRING PRIMARY KEY, MATNR STRING, PLWRK STRING, GSMNG NUMBER,
+  PSTTR DATE, PEDTR DATE, PAART STRING DEFAULT 'LA',
+  STATUS STRING,                              -- CREATED | DELETED
+  CR_ID STRING, CREATED_BY STRING, CREATED_AT TIMESTAMP_LTZ);
+CREATE OR REPLACE SEQUENCE PLNUM_SEQ START = 100001;
+
+CREATE OR REPLACE TABLE S4_CHANGE_DOCUMENT (   -- CDHDR + CDPOS, flattened
+  CHANGENR NUMBER AUTOINCREMENT, OBJECTCLAS STRING, OBJECTID STRING, TABNAME STRING,
+  FNAME STRING, CHNGIND STRING, VALUE_OLD STRING, VALUE_NEW STRING,
+  USERNAME STRING, UDATE TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP(), TCODE STRING, CR_ID STRING);
+
+CREATE OR REPLACE TABLE S4_API_OUTBOX (        -- the OData call S/4 would receive
+  CALL_ID NUMBER AUTOINCREMENT, CR_ID STRING, CR_ITEM NUMBER, SERVICE STRING, METHOD STRING,
+  RESOURCE_PATH STRING, PAYLOAD VARIANT, HTTP_STATUS NUMBER, RESPONSE VARIANT,
+  SENT_AT TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP());
+
+-- ---------------------------------------------------------------- governance
+CREATE OR REPLACE TABLE RECOVERY_CHANGE_REQUEST (
+  CR_ID STRING PRIMARY KEY, SCENARIO STRING, PLAN_HASH STRING, TARGET_SYSTEM STRING DEFAULT 'S4H/100',
+  STATUS STRING, REQUESTED_BY STRING, REQUESTED_AT TIMESTAMP_LTZ,
+  APPROVED_BY STRING, APPROVED_AT TIMESTAMP_LTZ, POSTED_AT TIMESTAMP_LTZ, REVERSED_AT TIMESTAMP_LTZ,
+  SNOWFLAKE_USER STRING, NOTE STRING);
+
+CREATE OR REPLACE TABLE CR_ITEM (
+  CR_ID STRING, CR_ITEM NUMBER, ACTION_NAME STRING, FLOW_ID STRING,
+  OBJECT_TYPE STRING, OBJECT_KEY STRING, FIELD STRING, VALUE_BEFORE STRING, VALUE_AFTER STRING,
+  PARAMS VARIANT, CRITERIA VARIANT, ELIGIBLE BOOLEAN, RESULT STRING, S4_DOCUMENT STRING,
+  PRIMARY KEY (CR_ID, CR_ITEM));
+
+CREATE OR REPLACE TABLE CR_APPROVAL (
+  CR_ID STRING, DECISION STRING, APPROVER STRING, ACKNOWLEDGEMENTS VARIANT, CONFIRMATION STRING,
+  COMMENT STRING, SNOWFLAKE_USER STRING, SNOWFLAKE_ROLE STRING, DECIDED_AT TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP());
+
+-- ---------------------------------------------------------------- demo seed
+-- Open order book: the real open items plus one open item per customer lane, so
+-- every reroute has S/4 documents to change. Synthetic numbers start at 4600001.
+CREATE OR REPLACE PROCEDURE SP_RESET_DEMO()
+RETURNS STRING LANGUAGE SQL
+COMMENT = 'Reset the simulated S/4HANA system to its seeded state. Clears change requests, change documents and the outbox.'
+EXECUTE AS CALLER
+AS
+$$
+BEGIN
+  TRUNCATE TABLE SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_SALES_ORDER_ITEM; TRUNCATE TABLE SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_PLANNED_ORDER; TRUNCATE TABLE SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_CHANGE_DOCUMENT;
+  TRUNCATE TABLE SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_API_OUTBOX; TRUNCATE TABLE SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST; TRUNCATE TABLE SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM; TRUNCATE TABLE SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_APPROVAL;
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_SALES_ORDER_ITEM
+    SELECT REPLACE(SALES_ORDER,'SO-',''), ITEM, SOLD_TO, MATERIAL, PLANT, ORDER_QTY, NET_VALUE_USD,
+           DATEADD(day, 30, CURRENT_DATE()), 'OPEN', 'SEED', CURRENT_TIMESTAMP()
+      FROM SAP_SUPPLY_CHAIN.OPS_EXT.A_SALES_ORDER_ITEM WHERE ORDER_STATUS <> 'Shipped';
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_SALES_ORDER_ITEM
+    SELECT TO_VARCHAR(4600000 + ROW_NUMBER() OVER (ORDER BY f.FLOW_ID)), 10, f.TARGET_NAME, m.MATNR, p.WERKS,
+           GREATEST(1, f.MONTHLY_VOLUME), f.MONTHLY_VALUE, DATEADD(day, 21 + ROW_NUMBER() OVER (ORDER BY f.FLOW_ID), CURRENT_DATE()),
+           'OPEN', 'SEED', CURRENT_TIMESTAMP()
+      FROM (SELECT DISTINCT SRC_ID AS FLOW_ID, DST_ID AS CATEGORY,     -- the view's typed columns read lowercase keys; PROPS keys are uppercase
+                   PROPS:MONTHLY_VOLUME::NUMBER AS MONTHLY_VOLUME, PROPS:MONTHLY_VALUE::NUMBER AS MONTHLY_VALUE,
+                   PROPS:SOURCE_ID::STRING AS SOURCE_ID, PROPS:TARGET_NAME::STRING AS TARGET_NAME, PROPS:TARGET_TYPE::STRING AS TARGET_TYPE
+              FROM SAP_SUPPLY_CHAIN.ONTOLOGY.V_CARRIESCATEGORY) f
+      JOIN SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_MATERIAL m ON m.MATERIAL_CATEGORY = f.CATEGORY AND m.IS_PRIMARY
+      JOIN SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_PLANT p ON p.NODE_ID = f.SOURCE_ID
+     WHERE f.TARGET_TYPE = 'Customer';
+  RETURN 'reset: ' || (SELECT COUNT(*) FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_SALES_ORDER_ITEM) || ' open sales order items';
+END;
+$$;
+
+-- ---------------------------------------------------------------- criteria helpers
+CREATE OR REPLACE FUNCTION PLANT_PRODUCES(WERKS STRING, CATEGORY STRING)
+RETURNS BOOLEAN
+AS $$ EXISTS (SELECT 1 FROM SAP_SUPPLY_CHAIN.ONTOLOGY.V_PRODUCES WHERE SRC_ID = WERKS AND DST_ID = CATEGORY) $$;
+
+CREATE OR REPLACE FUNCTION PLANT_SPARE_UNITS(WERKS STRING)
+RETURNS NUMBER
+COMMENT = 'Spare units per month at a plant, less planned orders already created in the simulated S/4HANA.'
+AS $$
+  (SELECT COALESCE(MAX(PROPS:PROPS:SPARE_UNITS::NUMBER), 0) FROM SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_PLANT WHERE PROPS:PROPS:PLANT::STRING = WERKS)
+  - (SELECT COALESCE(SUM(GSMNG), 0) FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_PLANNED_ORDER WHERE PLWRK = WERKS AND STATUS = 'CREATED')
+$$;
+
+-- ---------------------------------------------------------------- 1. propose (no S/4 writes)
+-- PLAN: {scenario, requestedBy, planHash, reroutes:[{flow_id, material_category, customer, fromPlant, toPlantId, unitsMoved}]}
+CREATE OR REPLACE PROCEDURE SP_PROPOSE_RECOVERY_CR(PLAN VARIANT)
+RETURNS VARIANT LANGUAGE SQL
+COMMENT = 'Turn a recovery plan into a change request: one item per S/4 document change, with before/after values and every criterion checked. Writes nothing to S/4.'
+EXECUTE AS CALLER
+AS
+$$
+DECLARE
+  cr STRING DEFAULT 'CR-' || TO_VARCHAR(CURRENT_TIMESTAMP(), 'YYYYMMDD-HH24MISS') || '-' || UPPER(RANDSTR(4, RANDOM()));
+BEGIN
+  IF (NOT IS_ROLE_IN_SESSION('SC_RECOVERY_PLANNER')) THEN
+    RETURN OBJECT_CONSTRUCT('error', 'Role SC_RECOVERY_PLANNER is required to propose changes to S/4HANA.');
+  END IF;
+  IF (COALESCE(TRIM(:PLAN:requestedBy::STRING), '') = '') THEN
+    RETURN OBJECT_CONSTRUCT('error', 'requestedBy is required.');
+  END IF;
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST (CR_ID, SCENARIO, PLAN_HASH, STATUS, REQUESTED_BY, REQUESTED_AT, SNOWFLAKE_USER)
+    SELECT :cr, :PLAN:scenario::STRING, :PLAN:planHash::STRING, 'SUBMITTED', :PLAN:requestedBy::STRING, CURRENT_TIMESTAMP(), CURRENT_USER();
+
+  -- open items on each rerouted lane, earliest first, taken until the moved quantity is covered
+  CREATE OR REPLACE TEMPORARY TABLE _pick AS
+  WITH r AS (
+    SELECT f.value:flow_id::STRING AS FLOW_ID, f.value:material_category::STRING AS CATEGORY,
+           f.value:customer::STRING AS CUSTOMER, f.value:toPlantId::STRING AS TO_WERKS,
+           p.WERKS AS FROM_WERKS, f.value:unitsMoved::NUMBER AS UNITS, f.index AS SEQ
+      FROM TABLE(FLATTEN(:PLAN:reroutes)) f JOIN SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_PLANT p ON p.NAME1 = f.value:fromPlant::STRING),
+  i AS (
+    SELECT r.*, s.VBELN, s.POSNR, s.MATNR, s.KWMENG, s.STATUS,
+           SUM(s.KWMENG) OVER (PARTITION BY r.FLOW_ID ORDER BY s.REQ_SHIP_DATE, s.VBELN ROWS UNBOUNDED PRECEDING) AS CUM
+      FROM r JOIN SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_SALES_ORDER_ITEM s ON s.SOLD_TO = r.CUSTOMER AND s.WERKS = r.FROM_WERKS
+      JOIN SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_MATERIAL m ON m.MATNR = s.MATNR AND m.MATERIAL_CATEGORY = r.CATEGORY
+     WHERE s.STATUS = 'OPEN')
+  SELECT i.*, pr.SRC_ID IS NOT NULL AS PRODUCES, COALESCE(sp.SPARE, 0) AS SPARE
+    FROM i
+    LEFT JOIN (SELECT DISTINCT SRC_ID, DST_ID FROM SAP_SUPPLY_CHAIN.ONTOLOGY.V_PRODUCES) pr ON pr.SRC_ID = i.TO_WERKS AND pr.DST_ID = i.CATEGORY
+    LEFT JOIN (SELECT p.PROPS:PROPS:PLANT::STRING AS WERKS, p.PROPS:PROPS:SPARE_UNITS::NUMBER - COALESCE(o.QTY, 0) AS SPARE
+                 FROM SAP_SUPPLY_CHAIN.ONTOLOGY.VW_ONT_PLANT p
+                 LEFT JOIN (SELECT PLWRK, SUM(GSMNG) AS QTY FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_PLANNED_ORDER WHERE STATUS = 'CREATED' GROUP BY 1) o
+                   ON o.PLWRK = p.PROPS:PROPS:PLANT::STRING) sp ON sp.WERKS = i.TO_WERKS
+   WHERE CUM - KWMENG < UNITS;
+
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM
+    SELECT :cr, ROW_NUMBER() OVER (ORDER BY SEQ, VBELN, POSNR), 'Reassign Delivering Plant', FLOW_ID,
+           'Sales Order Item', VBELN || '/' || POSNR, 'ProductionPlant (VBAP-WERKS)', FROM_WERKS, TO_WERKS,
+           OBJECT_CONSTRUCT('sales_order', VBELN, 'item', POSNR, 'new_plant', TO_WERKS, 'cr_id', :cr),
+           ARRAY_CONSTRUCT(
+             OBJECT_CONSTRUCT('criterion', 'Sales order item is open', 'pass', STATUS = 'OPEN'),
+             OBJECT_CONSTRUCT('criterion', 'New plant differs from the current plant', 'pass', TO_WERKS <> FROM_WERKS),
+             OBJECT_CONSTRUCT('criterion', 'New plant produces ' || CATEGORY, 'pass', PRODUCES)),
+           STATUS = 'OPEN' AND TO_WERKS <> FROM_WERKS AND PRODUCES, NULL, NULL
+      FROM _pick;
+
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM
+    SELECT :cr, (SELECT COALESCE(MAX(CR_ITEM), 0) FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM WHERE CR_ID = :cr) + ROW_NUMBER() OVER (ORDER BY MIN(SEQ)),
+           'Create Planned Order', FLOW_ID, 'Planned Order', '(new)', 'Planned order quantity (PLAF-GSMNG)',
+           NULL, SUM(KWMENG)::STRING || ' x ' || ANY_VALUE(MATNR) || ' at ' || ANY_VALUE(TO_WERKS),
+           OBJECT_CONSTRUCT('material', ANY_VALUE(MATNR), 'plant', ANY_VALUE(TO_WERKS), 'quantity', SUM(KWMENG),
+                            'need_date', DATEADD(day, 14, CURRENT_DATE()), 'cr_id', :cr),
+           ARRAY_CONSTRUCT(
+             OBJECT_CONSTRUCT('criterion', 'Plant produces ' || ANY_VALUE(CATEGORY), 'pass', BOOLAND_AGG(PRODUCES)),
+             OBJECT_CONSTRUCT('criterion', 'Quantity fits spare capacity (' || ANY_VALUE(SPARE) || ' units free)',
+                              'pass', SUM(KWMENG) <= ANY_VALUE(SPARE))),
+           BOOLAND_AGG(PRODUCES) AND SUM(KWMENG) <= ANY_VALUE(SPARE), NULL, NULL
+      FROM _pick GROUP BY FLOW_ID;
+
+  RETURN OBJECT_CONSTRUCT('cr_id', :cr, 'items', (SELECT COUNT(*) FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM WHERE CR_ID = :cr),
+                          'eligible', (SELECT COUNT_IF(ELIGIBLE) FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM WHERE CR_ID = :cr));
+END;
+$$;
+
+-- ---------------------------------------------------------------- 2. approve or reject
+CREATE OR REPLACE PROCEDURE SP_DECIDE_CR(CR_ID STRING, DECISION STRING, APPROVER STRING, ACKS VARIANT, CONFIRMATION STRING, COMMENT STRING)
+RETURNS VARIANT LANGUAGE SQL
+COMMENT = 'Approve or reject a submitted change request. Approval needs the approver role, an approver other than the requester, all three acknowledgements and the confirmation phrase POST TO S4HANA.'
+EXECUTE AS CALLER
+AS
+$$
+DECLARE st STRING; req STRING;
+BEGIN
+  SELECT MAX(STATUS), MAX(REQUESTED_BY) INTO :st, :req FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST WHERE CR_ID = :CR_ID;
+  IF (st IS NULL) THEN RETURN OBJECT_CONSTRUCT('error', 'Change request ' || :CR_ID || ' not found.'); END IF;
+  IF (st <> 'SUBMITTED') THEN RETURN OBJECT_CONSTRUCT('error', 'Change request is ' || st || ', not SUBMITTED.'); END IF;
+  IF (NOT IS_ROLE_IN_SESSION('SC_RECOVERY_APPROVER')) THEN
+    RETURN OBJECT_CONSTRUCT('error', 'Role SC_RECOVERY_APPROVER is required to decide on S/4HANA changes.');
+  END IF;
+  IF (COALESCE(TRIM(:APPROVER), '') = '' OR UPPER(TRIM(:APPROVER)) = UPPER(TRIM(req))) THEN
+    RETURN OBJECT_CONSTRUCT('error', 'Segregation of duties: the approver must be named and must not be the requester (' || req || ').');
+  END IF;
+  IF (:DECISION = 'APPROVE') THEN
+    IF (COALESCE(ARRAY_SIZE(:ACKS), 0) < 3 OR NOT ARRAY_CONTAINS('reviewed'::VARIANT, :ACKS)
+        OR NOT ARRAY_CONTAINS('transactional'::VARIANT, :ACKS) OR NOT ARRAY_CONTAINS('recorded'::VARIANT, :ACKS)) THEN
+      RETURN OBJECT_CONSTRUCT('error', 'All three acknowledgements are required.');
+    END IF;
+    IF (COALESCE(:CONFIRMATION, '') <> 'POST TO S4HANA') THEN
+      RETURN OBJECT_CONSTRUCT('error', 'Type POST TO S4HANA exactly to confirm.');
+    END IF;
+  END IF;
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_APPROVAL (CR_ID, DECISION, APPROVER, ACKNOWLEDGEMENTS, CONFIRMATION, COMMENT, SNOWFLAKE_USER, SNOWFLAKE_ROLE)
+    SELECT :CR_ID, :DECISION, :APPROVER, :ACKS, :CONFIRMATION, :COMMENT, CURRENT_USER(), CURRENT_ROLE();
+  UPDATE SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST
+     SET STATUS = IFF(:DECISION = 'APPROVE', 'APPROVED', 'REJECTED'), APPROVED_BY = :APPROVER, APPROVED_AT = CURRENT_TIMESTAMP()
+   WHERE CR_ID = :CR_ID;
+  RETURN OBJECT_CONSTRUCT('cr_id', :CR_ID, 'status', IFF(:DECISION = 'APPROVE', 'APPROVED', 'REJECTED'));
+END;
+$$;
+
+-- ---------------------------------------------------------------- Action implementations
+-- Each re-checks its own criteria and refuses unless its change request is being posted
+-- and the call matches an approved, eligible item. Calling one directly does nothing.
+CREATE OR REPLACE PROCEDURE S4_REASSIGN_DELIVERING_PLANT(CR_ID STRING, CR_ITEM NUMBER, SALES_ORDER STRING, ITEM NUMBER, NEW_PLANT STRING)
+RETURNS STRING LANGUAGE SQL
+COMMENT = 'Action "Reassign Delivering Plant": PATCH A_SalesOrderItem.ProductionPlant in S/4HANA. Requires a change request in POSTING state.'
+EXECUTE AS CALLER
+AS
+$$
+DECLARE st STRING; ok BOOLEAN; cur STRING; sst STRING; cat STRING; user_ STRING; before_ STRING; prod BOOLEAN;
+BEGIN
+  SELECT MAX(STATUS), MAX(APPROVED_BY) INTO :st, :user_ FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST WHERE CR_ID = :CR_ID;
+  IF (COALESCE(st, '') <> 'POSTING') THEN RETURN 'REFUSED: change request ' || :CR_ID || ' is not approved for posting'; END IF;
+  SELECT COUNT(*) > 0 INTO :ok FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM
+   WHERE CR_ID = :CR_ID AND CR_ITEM = :CR_ITEM AND ACTION_NAME = 'Reassign Delivering Plant' AND ELIGIBLE
+     AND OBJECT_KEY = :SALES_ORDER || '/' || :ITEM AND VALUE_AFTER = :NEW_PLANT;
+  IF (NOT ok) THEN RETURN 'REFUSED: call does not match an approved change request item'; END IF;
+  SELECT MAX(s.WERKS), MAX(s.STATUS), MAX(m.MATERIAL_CATEGORY) INTO :cur, :sst, :cat
+    FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_SALES_ORDER_ITEM s JOIN SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_MATERIAL m ON m.MATNR = s.MATNR WHERE s.VBELN = :SALES_ORDER AND s.POSNR = :ITEM;
+  IF (sst IS NULL) THEN RETURN 'REFUSED: sales order item not found'; END IF;
+  IF (sst <> 'OPEN') THEN RETURN 'REFUSED: sales order item is ' || sst; END IF;
+  SELECT MAX(VALUE_BEFORE) INTO :before_ FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM WHERE CR_ID = :CR_ID AND CR_ITEM = :CR_ITEM;
+  IF (cur <> before_) THEN
+    RETURN 'REFUSED: item changed since the request was approved (plant is now ' || cur || ')';
+  END IF;
+  SELECT SAP_SUPPLY_CHAIN.S4_WRITEBACK.PLANT_PRODUCES(:NEW_PLANT, :cat) INTO :prod;
+  IF (NOT prod) THEN RETURN 'REFUSED: plant ' || :NEW_PLANT || ' does not produce ' || cat; END IF;
+
+  UPDATE SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_SALES_ORDER_ITEM SET WERKS = :NEW_PLANT, CHANGED_BY = :user_, CHANGED_AT = CURRENT_TIMESTAMP()
+   WHERE VBELN = :SALES_ORDER AND POSNR = :ITEM;
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_CHANGE_DOCUMENT (OBJECTCLAS, OBJECTID, TABNAME, FNAME, CHNGIND, VALUE_OLD, VALUE_NEW, USERNAME, TCODE, CR_ID)
+    SELECT 'VERKBELEG', :SALES_ORDER, 'VBAP', 'WERKS', 'U', :cur, :NEW_PLANT, :user_, 'API_SALES_ORDER_SRV', :CR_ID;
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_API_OUTBOX (CR_ID, CR_ITEM, SERVICE, METHOD, RESOURCE_PATH, PAYLOAD, HTTP_STATUS, RESPONSE)
+    SELECT :CR_ID, :CR_ITEM, 'API_SALES_ORDER_SRV', 'PATCH',
+           '/sap/opu/odata/sap/API_SALES_ORDER_SRV/A_SalesOrderItem(SalesOrder=''' || :SALES_ORDER || ''',SalesOrderItem=''' || LPAD(:ITEM, 6, '0') || ''')',
+           OBJECT_CONSTRUCT('ProductionPlant', :NEW_PLANT), 204, OBJECT_CONSTRUCT('simulated', TRUE);
+  RETURN 'OK: ' || :SALES_ORDER || '/' || :ITEM || ' plant ' || cur || ' -> ' || :NEW_PLANT;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE S4_CREATE_PLANNED_ORDER(CR_ID STRING, CR_ITEM NUMBER, MATERIAL STRING, PLANT STRING, QUANTITY NUMBER, NEED_DATE DATE)
+RETURNS STRING LANGUAGE SQL
+COMMENT = 'Action "Create Planned Order": POST A_PlannedOrder in S/4HANA. Requires a change request in POSTING state.'
+EXECUTE AS CALLER
+AS
+$$
+DECLARE st STRING; ok BOOLEAN; cat STRING; spare NUMBER; pl STRING; user_ STRING; prod BOOLEAN;
+BEGIN
+  SELECT MAX(STATUS), MAX(APPROVED_BY) INTO :st, :user_ FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST WHERE CR_ID = :CR_ID;
+  IF (COALESCE(st, '') <> 'POSTING') THEN RETURN 'REFUSED: change request ' || :CR_ID || ' is not approved for posting'; END IF;
+  SELECT COUNT(*) > 0 INTO :ok FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM
+   WHERE CR_ID = :CR_ID AND CR_ITEM = :CR_ITEM AND ACTION_NAME = 'Create Planned Order' AND ELIGIBLE
+     AND PARAMS:material::STRING = :MATERIAL AND PARAMS:plant::STRING = :PLANT AND PARAMS:quantity::NUMBER = :QUANTITY;
+  IF (NOT ok) THEN RETURN 'REFUSED: call does not match an approved change request item'; END IF;
+  SELECT MAX(MATERIAL_CATEGORY) INTO :cat FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_MATERIAL WHERE MATNR = :MATERIAL;
+  SELECT SAP_SUPPLY_CHAIN.S4_WRITEBACK.PLANT_PRODUCES(:PLANT, :cat), SAP_SUPPLY_CHAIN.S4_WRITEBACK.PLANT_SPARE_UNITS(:PLANT) INTO :prod, :spare;
+  IF (NOT prod) THEN RETURN 'REFUSED: plant ' || :PLANT || ' does not produce ' || cat; END IF;
+  IF (:QUANTITY > spare) THEN RETURN 'REFUSED: plant ' || :PLANT || ' has ' || spare || ' spare units, ' || :QUANTITY || ' requested'; END IF;
+
+  SELECT LPAD(SAP_SUPPLY_CHAIN.S4_WRITEBACK.PLNUM_SEQ.NEXTVAL, 10, '0') INTO :pl;
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_PLANNED_ORDER (PLNUM, MATNR, PLWRK, GSMNG, PSTTR, PEDTR, STATUS, CR_ID, CREATED_BY, CREATED_AT)
+    SELECT :pl, :MATERIAL, :PLANT, :QUANTITY, CURRENT_DATE(), :NEED_DATE, 'CREATED', :CR_ID, :user_, CURRENT_TIMESTAMP();
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_CHANGE_DOCUMENT (OBJECTCLAS, OBJECTID, TABNAME, FNAME, CHNGIND, VALUE_OLD, VALUE_NEW, USERNAME, TCODE, CR_ID)
+    SELECT 'PLAF', :pl, 'PLAF', 'KEY', 'I', NULL, :QUANTITY || ' x ' || :MATERIAL || ' @ ' || :PLANT, :user_, 'API_PLANNED_ORDERS', :CR_ID;
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_API_OUTBOX (CR_ID, CR_ITEM, SERVICE, METHOD, RESOURCE_PATH, PAYLOAD, HTTP_STATUS, RESPONSE)
+    SELECT :CR_ID, :CR_ITEM, 'API_PLANNED_ORDERS', 'POST', '/sap/opu/odata/sap/API_PLANNED_ORDERS/A_PlannedOrder',
+           OBJECT_CONSTRUCT('Material', :MATERIAL, 'MRPPlant', :PLANT, 'ProductionPlant', :PLANT, 'PlannedOrderType', 'LA',
+                            'TotalQuantity', :QUANTITY::STRING, 'PlndOrderPlannedEndDate', :NEED_DATE::STRING),
+           201, OBJECT_CONSTRUCT('PlannedOrder', :pl, 'simulated', TRUE);
+  RETURN 'OK: planned order ' || :pl;
+END;
+$$;
+
+-- ---------------------------------------------------------------- 3. post
+CREATE OR REPLACE PROCEDURE SP_POST_CR(CR_ID STRING)
+RETURNS VARIANT LANGUAGE SQL
+COMMENT = 'Post an APPROVED change request to S/4HANA by calling each Action implementation for its eligible items. Stops at the first refusal.'
+EXECUTE AS CALLER
+AS
+$$
+DECLARE st STRING; res STRING; n NUMBER DEFAULT 0; failed STRING DEFAULT NULL;
+  c1 CURSOR FOR SELECT CR_ITEM, ACTION_NAME, PARAMS FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM WHERE CR_ID = ? AND ELIGIBLE ORDER BY CR_ITEM;
+BEGIN
+  SELECT MAX(STATUS) INTO :st FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST WHERE CR_ID = :CR_ID;
+  IF (COALESCE(st, '') <> 'APPROVED') THEN RETURN OBJECT_CONSTRUCT('error', 'Change request is ' || COALESCE(st, 'missing') || '; only APPROVED requests can be posted.'); END IF;
+  IF (NOT IS_ROLE_IN_SESSION('SC_RECOVERY_APPROVER')) THEN RETURN OBJECT_CONSTRUCT('error', 'Role SC_RECOVERY_APPROVER is required to post to S/4HANA.'); END IF;
+  UPDATE SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST SET STATUS = 'POSTING' WHERE CR_ID = :CR_ID;
+  OPEN c1 USING (:CR_ID);
+  FOR r IN c1 DO
+    LET it NUMBER := r.CR_ITEM; LET p VARIANT := r.PARAMS;
+    IF (r.ACTION_NAME = 'Reassign Delivering Plant') THEN
+      CALL SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_REASSIGN_DELIVERING_PLANT(:CR_ID, :it, :p:sales_order::STRING, :p:item::NUMBER, :p:new_plant::STRING) INTO :res;
+    ELSE
+      CALL SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_CREATE_PLANNED_ORDER(:CR_ID, :it, :p:material::STRING, :p:plant::STRING, :p:quantity::NUMBER, :p:need_date::DATE) INTO :res;
+    END IF;
+    UPDATE SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM SET RESULT = :res, S4_DOCUMENT = IFF(STARTSWITH(:res, 'OK: planned order '), REPLACE(:res, 'OK: planned order ', ''), NULL)
+     WHERE CR_ID = :CR_ID AND CR_ITEM = :it;
+    IF (NOT STARTSWITH(:res, 'OK')) THEN failed := :res; BREAK; END IF;
+    n := n + 1;
+  END FOR;
+  UPDATE SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST
+     SET STATUS = IFF(:failed IS NULL, 'POSTED', 'POSTED_WITH_ERRORS'), POSTED_AT = CURRENT_TIMESTAMP(), NOTE = :failed
+   WHERE CR_ID = :CR_ID;
+  RETURN OBJECT_CONSTRUCT('cr_id', :CR_ID, 'posted', :n, 'status', IFF(:failed IS NULL, 'POSTED', 'POSTED_WITH_ERRORS'), 'error', :failed);
+END;
+$$;
+
+-- ---------------------------------------------------------------- 4. reverse (demo reset of one request)
+CREATE OR REPLACE PROCEDURE SP_REVERSE_CR(CR_ID STRING, REVERSED_BY STRING)
+RETURNS VARIANT LANGUAGE SQL
+COMMENT = 'Reverse a posted change request from its change documents: restore plants, delete planned orders, record reversal documents.'
+EXECUTE AS CALLER
+AS
+$$
+DECLARE st STRING;
+BEGIN
+  SELECT MAX(STATUS) INTO :st FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST WHERE CR_ID = :CR_ID;
+  IF (COALESCE(st, '') NOT IN ('POSTED', 'POSTED_WITH_ERRORS')) THEN RETURN OBJECT_CONSTRUCT('error', 'Only posted change requests can be reversed.'); END IF;
+  IF (NOT IS_ROLE_IN_SESSION('SC_RECOVERY_APPROVER')) THEN RETURN OBJECT_CONSTRUCT('error', 'Role SC_RECOVERY_APPROVER is required.'); END IF;
+  MERGE INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_SALES_ORDER_ITEM s USING (
+    SELECT OBJECTID, SPLIT_PART(c.OBJECT_KEY, '/', 2)::NUMBER AS POSNR, d.VALUE_OLD
+      FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_CHANGE_DOCUMENT d JOIN SAP_SUPPLY_CHAIN.S4_WRITEBACK.CR_ITEM c ON c.CR_ID = d.CR_ID AND c.ACTION_NAME = 'Reassign Delivering Plant'
+       AND SPLIT_PART(c.OBJECT_KEY, '/', 1) = d.OBJECTID AND c.RESULT LIKE 'OK%'
+     WHERE d.CR_ID = :CR_ID AND d.TABNAME = 'VBAP') r
+    ON s.VBELN = r.OBJECTID AND s.POSNR = r.POSNR
+    WHEN MATCHED THEN UPDATE SET WERKS = r.VALUE_OLD, CHANGED_BY = :REVERSED_BY, CHANGED_AT = CURRENT_TIMESTAMP();
+  INSERT INTO SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_CHANGE_DOCUMENT (OBJECTCLAS, OBJECTID, TABNAME, FNAME, CHNGIND, VALUE_OLD, VALUE_NEW, USERNAME, TCODE, CR_ID)
+    SELECT OBJECTCLAS, OBJECTID, TABNAME, FNAME, IFF(CHNGIND = 'I', 'D', 'U'), VALUE_NEW, VALUE_OLD, :REVERSED_BY, 'REVERSAL', :CR_ID
+      FROM SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_CHANGE_DOCUMENT WHERE CR_ID = :CR_ID AND TCODE <> 'REVERSAL';
+  UPDATE SAP_SUPPLY_CHAIN.S4_WRITEBACK.S4_PLANNED_ORDER SET STATUS = 'DELETED' WHERE CR_ID = :CR_ID;
+  UPDATE SAP_SUPPLY_CHAIN.S4_WRITEBACK.RECOVERY_CHANGE_REQUEST SET STATUS = 'REVERSED', REVERSED_AT = CURRENT_TIMESTAMP() WHERE CR_ID = :CR_ID;
+  RETURN OBJECT_CONSTRUCT('cr_id', :CR_ID, 'status', 'REVERSED');
+END;
+$$;
+
+-- ---------------------------------------------------------------- Action discovery (blog pattern)
+CREATE OR REPLACE PROCEDURE FIND_ACTIONS_FOR_ENTITY(ENTITY STRING)
+RETURNS VARIANT LANGUAGE SQL
+COMMENT = 'Business Ontology Actions that act on an entity (walks ACTS_ON into it), each with its stored contract. E.g. ''Supply Chain.Sales Order''.'
+EXECUTE AS CALLER
+AS
+$$
+DECLARE
+  term VARIANT;
+  out ARRAY DEFAULT ARRAY_CONSTRUCT();
+  c1 CURSOR FOR
+    SELECT n.value:fqn::STRING AS FQN
+      FROM TABLE(FLATTEN(INPUT => PARSE_JSON(?):relationships:edges)) e,
+           TABLE(FLATTEN(INPUT => PARSE_JSON(?):relationships:nodes)) n
+     WHERE e.value:relationshipType::STRING = 'ACTS_ON' AND e.value:status::STRING = 'ACTIVE'
+       AND n.value:termId = e.value:sourceTermId AND n.value:itemKind::STRING = 'ACTION';
+BEGIN
+  term := PARSE_JSON(SYSTEM$GET_GLOSSARY_TERM(:ENTITY));
+  LET t STRING := TO_JSON(term);
+  OPEN c1 USING (t, t);
+  FOR r IN c1 DO
+    LET a VARIANT := PARSE_JSON(SYSTEM$GET_GLOSSARY_TERM(r.FQN));
+    out := ARRAY_APPEND(out, OBJECT_CONSTRUCT('name', a:name, 'fqn', a:fqn, 'status', a:status, 'description', a:description,
+                                              'synonyms', a:synonyms, 'actionSpec', PARSE_JSON(a:actionSpec::STRING)));
+  END FOR;
+  RETURN out;
+END;
+$$;
+
+GRANT USAGE ON SCHEMA SAP_SUPPLY_CHAIN.S4_WRITEBACK TO ROLE SC_RECOVERY_PLANNER;
+GRANT SELECT ON ALL TABLES IN SCHEMA SAP_SUPPLY_CHAIN.S4_WRITEBACK TO ROLE SC_RECOVERY_PLANNER;
+GRANT USAGE ON PROCEDURE SP_PROPOSE_RECOVERY_CR(VARIANT) TO ROLE SC_RECOVERY_PLANNER;
+GRANT USAGE ON PROCEDURE SP_DECIDE_CR(STRING, STRING, STRING, VARIANT, STRING, STRING) TO ROLE SC_RECOVERY_APPROVER;
+GRANT USAGE ON PROCEDURE SP_POST_CR(STRING) TO ROLE SC_RECOVERY_APPROVER;
+GRANT USAGE ON PROCEDURE SP_REVERSE_CR(STRING, STRING) TO ROLE SC_RECOVERY_APPROVER;
+
+CALL SP_RESET_DEMO();

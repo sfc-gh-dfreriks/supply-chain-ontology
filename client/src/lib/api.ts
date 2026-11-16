@@ -218,6 +218,54 @@ export const api = {
     post<{ text: string }>("/scenario/ask", { ...d, question, history }),
 };
 
+// ---------------------------------------------------------------- S/4HANA writeback
+// Governed execution of the recovery plan: Business Ontology Action contracts,
+// a change request, a second-person approval, then posting to the (simulated)
+// S/4HANA system. Mirrors server/src/services/writeback.ts. The public build has
+// no server, so it reads a baked example (tools/bake_static.py) and cannot post.
+export interface ActionContract {
+  name: string; fqn: string; status: string; description: string; synonyms: string[]; actsOn: string;
+  actionSpec: {
+    actionKind: string; targetEntity: string; criteria: string[]; effects: string[];
+    parameters: { name: string; dataType: string; required: boolean; description: string }[];
+    execution: { kind: string; target: string };
+  };
+}
+export interface S4System { id: string; client: string; label: string }
+export interface CrItem {
+  cr_item: number; action_name: string; flow_id: string; object_type: string; object_key: string;
+  field: string; value_before: string | null; value_after: string; params: Record<string, unknown>;
+  criteria: { criterion: string; pass: boolean }[]; eligible: boolean; result: string | null; s4_document: string | null;
+}
+export interface ChangeRequest {
+  cr_id: string; scenario: string; plan_hash: string; status: string;
+  requested_by: string; requested_at: string; approved_by: string | null; approved_at: string | null;
+  posted_at: string | null; reversed_at: string | null; note: string | null;
+  system: S4System; confirmationPhrase: string; acknowledgements: { id: string; text: string }[];
+  items: CrItem[];
+  approvals: { decision: string; approver: string; acknowledgements: string[]; confirmation: string; comment: string;
+               snowflake_user: string; snowflake_role: string; decided_at: string }[];
+  changeDocuments: { changenr: number; objectclas: string; objectid: string; tabname: string; fname: string; chngind: string;
+                     value_old: string | null; value_new: string | null; username: string; udate: string; tcode: string }[];
+  outbox: { call_id: number; cr_item: number; service: string; method: string; resource_path: string;
+            payload: Record<string, unknown>; http_status: number; response: Record<string, unknown>; sent_at: string }[];
+}
+
+export const writeback = {
+  actions: () => get<{ system: S4System; actions: ActionContract[] }>("/writeback/actions"),
+  /** Static build only: a change request baked at each stage, for the read-only walkthrough. */
+  example: () => get<{ proposed: ChangeRequest; posted: ChangeRequest }>("/writeback/example"),
+  propose: (disruption: Disruption, requestedBy: string) =>
+    post<ChangeRequest>("/writeback/propose", { disruption, requestedBy }),
+  get: (id: string) => get<ChangeRequest>(`/writeback/cr/${encodeURIComponent(id)}`),
+  decide: (id: string, disruption: Disruption, body: {
+    decision: "APPROVE" | "REJECT"; approver: string; acknowledgements: string[]; confirmation: string; comment: string;
+  }) => post<ChangeRequest>(`/writeback/cr/${encodeURIComponent(id)}/decide`, { disruption, ...body }),
+  post: (id: string, disruption: Disruption) =>
+    post<ChangeRequest>(`/writeback/cr/${encodeURIComponent(id)}/post`, { disruption }),
+  reverse: (id: string, by: string) => post<ChangeRequest>(`/writeback/cr/${encodeURIComponent(id)}/reverse`, { by }),
+  reset: () => post<{ message: string }>("/writeback/reset", {}),
+};
 
 // ---------------------------------------------------------------- digital thread + Ask Cortex
 export const thread = {

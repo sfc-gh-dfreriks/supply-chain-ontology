@@ -59,6 +59,7 @@ def qa(doc, pairs):
 
 
 def main():
+    Wb = facts.writeback()
     F = facts.persona_facts()
     X = facts.build()
 
@@ -188,6 +189,14 @@ def main():
         ["9", "Mitigation & Recovery", "Click **Brief me**, then ask a follow-up.",
          "“The AI reads the numbers the simulation produced — it does not invent them. "
          "Ask it what happens if the outage runs twice as long.”"],
+        ["10", "Execute in S/4HANA", "Click **Execute in S/4HANA →**, then **Raise change request**.",
+         f"“Now we act on it. The plan becomes {Wb['items']} S/4HANA changes — two sales order items "
+         f"moved to San Jose and two planned orders — and every rule each change must meet is "
+         f"checked here, before anything is written.”"],
+        ["10b", "Execute in S/4HANA", "Open the approval, enter the requester's own name as approver.",
+         "**Pause here.** “The person who raised it cannot approve it, and the approver has to "
+         "acknowledge in writing that this changes the system of record. Then it posts, and "
+         "S/4 records every change under their name.” (The S/4 system is simulated.)"],
     ])
 
     h2(doc, "Optional second scenario, 60 seconds")
@@ -515,6 +524,12 @@ def main():
         ["8", "Mitigation & Recovery", "Click **Brief me** or **Ask Cortex**.",
          "“The AI is AI_COMPLETE, handed the computed scenario and the governed definitions "
          "as facts. It interprets; it does not calculate, so every number stays auditable.”"],
+        ["8b", "Execute in S/4HANA", "Click a contract chip, e.g. **Reassign Delivering Plant**.",
+         "“Writes follow the same rule. Each S/4HANA change is an Action node in the same domain, "
+         "with parameters, criteria, effects and the one procedure that may run it. The app finds "
+         "them by walking ACTS_ON; Snowflake RBAC gates approval; the procedure re-checks its own "
+         "criteria, so calling it directly does nothing. S/4 is simulated here — swapping in a real "
+         "OData connector changes only that procedure.”"],
         ["9", "—", "Summarise the build.",
          "“One governed domain, three exporters that walk it, a reconcile step that fails "
          "the refresh if the served files drift from the ontology, and an application. No "

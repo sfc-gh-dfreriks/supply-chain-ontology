@@ -22,13 +22,15 @@ PAGES = [
      "Snowsight screenshots of the same domain: graph, list, Supplier and Plant nodes, change history"),
     ("Ask Cortex", "#ask",
      "Questions across the whole supply chain, answered from the governed domain, operations and every scenario"),
-    ("Guided Demo", "#demo", "Seven-step walkthrough of the hurricane scenario"),
+    ("Guided Demo", "#demo", "Eight-step walkthrough of the hurricane scenario, ending in the governed S/4HANA writeback"),
     ("Scenario Studio", "#scenario",
      "Build a disruption from five event types; results bucketed by the response each needs"),
     ("Ripple Map", "#ripple",
      "Geography and topology side by side, the cascade played one lane at a time"),
     ("Mitigation & Recovery", "#mitigation",
      "Reroutes inside real capacity, old lanes in red and new lanes in green; what cannot be saved and why"),
+    ("Execute in S/4HANA", "#execute",
+     "The plan as S/4HANA document changes, governed by Business Ontology Actions and a second-person approval"),
     ("Digital Thread", "#thread",
      "Orders, systems, component lots and tools: which customers did this bad lot reach?"),
 ]
@@ -109,6 +111,49 @@ def build():
             "unprotected": p["valueUnprotected"],
             "reroutes": len(ham["plan"]["reroutes"]),
         },
+    }
+
+
+def writeback():
+    """The Execute in S/4HANA page: Action contracts and the baked hurricane change
+    request (client/public/data/writeback_*.json, written by tools/bake_static.py)."""
+    acts = _load(BAKED / "writeback_actions.json")
+    ex = _load(BAKED / "writeback_example.json")
+    posted = ex["posted"]
+    items = posted["items"]
+    by_type = Counter(i["object_type"] for i in items)
+    return {
+        "system": acts["system"]["label"],
+        "actions": [{"name": a["name"], "acts_on": a["actsOn"].replace("Supply Chain.", ""),
+                     "kind": a["actionSpec"]["actionKind"], "criteria": a["actionSpec"]["criteria"],
+                     "effects": a["actionSpec"]["effects"], "target": a["actionSpec"]["execution"]["target"]}
+                    for a in acts["actions"]],
+        "scenario": posted["scenario"],
+        "cr_id": posted["cr_id"],
+        "items": len(items),
+        "sales_order_items": by_type.get("Sales Order Item", 0),
+        "planned_orders": by_type.get("Planned Order", 0),
+        "odata_calls": len(posted["outbox"]),
+        "change_documents": len(posted["changeDocuments"]),
+        "changes": [f"{i['object_type']} {i['object_key']}: {i['field']} {i['value_before'] or ''} → {i['value_after']}".replace("  ", " ")
+                    for i in items],
+        "requester": posted["requested_by"],
+        "approver": posted["approved_by"],
+        "phrase": ex["proposed"]["confirmationPhrase"],
+        "acknowledgements": [a["text"] for a in ex["proposed"]["acknowledgements"]],
+        "guards": [
+            "Approver holds SC_RECOVERY_APPROVER and is not the requester",
+            "Three acknowledgements, including that this changes live transactional data, and the phrase POST TO S4HANA",
+            "The server recomputes the plan and refuses if it no longer matches the request",
+            "Each Action procedure re-checks its criteria and refuses anything not approved, so a direct call does nothing",
+            "Every change is written to CDHDR/CDPOS-style change documents under the approver and can be reversed",
+        ],
+        "sql": "sql/ontology/10_s4_writeback.sql",
+        "test": "tools/test_s4_writeback.py",
+        "screenshot": ROOT / "docs" / "writeback" / "13_process_posted.png",
+        "screenshot_dialog": ROOT / "docs" / "writeback" / "04_self_approval_blocked.png",
+        "simulated": "The S/4HANA system (S4H, client 100) is simulated in SAP_SUPPLY_CHAIN.S4_WRITEBACK; "
+                     "no real S/4HANA connection is made.",
     }
 
 
