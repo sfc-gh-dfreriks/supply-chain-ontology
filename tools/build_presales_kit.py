@@ -269,7 +269,7 @@ def build_start_here(X, sc, network):
     body(
         doc,
         "The narrated walkthrough was re-recorded on 14 November 2026 in the author's "
-        "own voice (a Qwen3-TTS clone), on the current eight-page app. It opens on "
+        "own voice (a Qwen3-TTS clone), on the current nine-page app. It opens on "
         "Snowflake Business Ontology: the governed Supply Chain domain, the Plant "
         "concept, what the app reads through the ontology, and the same domain in "
         "Snowsight. It then runs the hurricane scenario end to end, tying each step "

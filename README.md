@@ -133,7 +133,7 @@ Playwright (`npm run dev`; the hurricane preset is loaded through
 `sessionStorage['sc.preset']`), cached in `tools/.presales_shots/` and reused if
 the app is down.
 
-The narrated walkthrough (`04_Walkthrough_Narrated_4min51.mp4`, re-recorded
+The narrated walkthrough (`04_Walkthrough_Narrated_4min54.mp4`, re-recorded
 14 Nov 2026) opens on Snowflake Business Ontology, then runs the hurricane scenario
 and the red/green recovery. Its script is `tools/video/segments.py`.
 

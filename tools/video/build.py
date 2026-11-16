@@ -272,6 +272,7 @@ def phase_capture():
 
     with sync_playwright() as pw:
         b = pw.chromium.launch(args=["--force-device-scale-factor=1"])
+        rec_start = time.monotonic()     # recording begins with the context
         ctx = b.new_context(viewport={"width": W, "height": H},
                             record_video_dir=str(vid),
                             record_video_size={"width": W, "height": H})
@@ -313,7 +314,10 @@ def phase_capture():
     shutil.move(str(src), dst)
 
     raw = duration(dst)
-    preroll = round(raw - total, 3)      # page-load time before t0
+    # Page-load time before t0, measured directly. Deriving it as raw - total
+    # breaks when the encoder drops or pads frames at the tail, which put the
+    # screen 14s ahead of the narration on a slow page load.
+    preroll = round(t0 - rec_start, 3)
     (WORK / "timeline.json").write_text(json.dumps(
         dict(total=round(total, 3), preroll=max(0.0, preroll),
              title=cl["title"], end=cl["end"],
