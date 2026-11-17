@@ -372,6 +372,40 @@ def do_action(pg, act):
                     ".singleNodeValue.scrollIntoView({block: 'start'})", act[1])
         pg.wait_for_timeout(900)
         return 900
+    # ---- Execute in S/4HANA page
+    if kind == "wb_reset":
+        # reset the simulated S/4HANA so every take starts from the seeded order book
+        pg.request.post(APP + "api/writeback/reset", data="{}", headers={"content-type": "application/json"})
+        return 0
+    if kind == "click_role":
+        # exact: "Approve changes to S/4HANA" must not match "Review and approve changes…"
+        pg.get_by_role("button", name=act[1], exact=True).first.click()
+        pg.wait_for_timeout(700)
+        return 700
+    if kind == "fill_placeholder":
+        pg.get_by_placeholder(act[1]).fill("")
+        pg.get_by_placeholder(act[1]).press_sequentially(act[2], delay=25)
+        pg.wait_for_timeout(500)
+        return 500
+    if kind == "fill_css":
+        pg.locator(act[1]).first.press_sequentially(act[2], delay=45)
+        pg.wait_for_timeout(400)
+        return 400
+    if kind == "check_all":
+        for box in pg.get_by_role("dialog").get_by_role("checkbox").all():
+            box.check()
+            pg.wait_for_timeout(350)
+        return 1050
+    if kind == "wait_text":
+        # Snowflake calls take a few seconds; the narration starts once they land
+        pg.get_by_text(act[1], exact=True).first.wait_for(timeout=180000)
+        pg.wait_for_timeout(600)
+        return 600
+    if kind == "scroll_to":
+        # centre the target: scroll_into_view_if_needed stops as soon as it peeks in
+        pg.get_by_text(act[1]).first.evaluate("e => e.scrollIntoView({block: 'center', behavior: 'smooth'})")
+        pg.wait_for_timeout(1100)
+        return 1100
     raise ValueError(f"unknown action {act!r}")
 
 

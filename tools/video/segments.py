@@ -22,6 +22,7 @@ NAV = {
     "scenario": "Scenario Studio",
     "ripple": "Ripple Map",
     "mitigation": "Mitigation & Recovery",
+    "execute": "Execute in S/4HANA",
 }
 
 SEGMENTS = [
@@ -271,17 +272,104 @@ SEGMENTS = [
                    body="No other plant produces Die Sorting. A sole-source "
                         "dependency, not a capacity shortfall."),
     ),
+    # ------------------------------------------------------------ execute in S/4HANA
     dict(
-        id="35_close", page="mitigation", actions=[],
+        id="40_execute", page="execute", actions=[("wb_reset",), ("wait", 900)],
+        narration=(
+            "A plan is only worth something if you can carry it out. [[slnc 300]] "
+            "This page turns those two reroutes into changes in S/4HANA. [[slnc 300]] "
+            "The diagram is the path they take: the ontology, a change request, a "
+            "person, Snowflake, and then the system of record."
+        ),
+        popup=dict(title="From plan to S/4HANA",
+                   figure="two reroutes → four changes",
+                   body="Sales order items move plant; planned orders are created. "
+                        "S/4HANA is simulated in Snowflake for the demo."),
+    ),
+    dict(
+        id="41_contract", page="execute",
+        actions=[("click_text", "Reassign Delivering Plant"), ("scroll_to", "Supply Chain.Reassign Delivering Plant")],
+        narration=(
+            "Every change is an Action in the same governed ontology. [[slnc 300]] "
+            "Reassign Delivering Plant acts on Sales Order. Its contract says what it "
+            "needs, when it's allowed, what it changes, [[slnc 200]] and the one "
+            "procedure that's allowed to run it."
+        ),
+        popup=dict(title="The ontology defines the verb",
+                   figure="3 Action nodes",
+                   body="Parameters, criteria, effects and the procedure that runs "
+                        "it, approved like any other concept."),
+    ),
+    dict(
+        id="42_raise", page="execute",
+        actions=[("click_role", "Raise change request"), ("wait_text", "SUBMITTED"), ("scroll_to", "Criteria (from the contract)")],
+        narration=(
+            "Raise the change request. [[slnc 300]] Two sales order items move from "
+            "Austin to San Jose, and two planned orders are created there. [[slnc 300]] "
+            "Every rule in each contract is checked against live data, [[slnc 200]] and "
+            "nothing has been written yet."
+        ),
+        popup=dict(title="Checked before anything is written",
+                   figure="4 changes · all criteria pass",
+                   body="Open item, plant produces the category, spare capacity: "
+                        "each criterion shown per document."),
+    ),
+    dict(
+        id="43_selfapprove", page="execute",
+        actions=[("click_role", "Review and approve changes to S/4HANA…"),
+                 ("fill_placeholder", "e.g. Raj Patel", "Maria Chen (Supply Planner)")],
+        narration=(
+            "Approval says it plainly: you're about to change transactional data in "
+            "S/4HANA. [[slnc 300]] And the planner who raised the request can't "
+            "approve it. [[slnc 200]] The button stays locked."
+        ),
+        popup=dict(title="Segregation of duties",
+                   figure="requester ≠ approver",
+                   body="Enforced in Snowflake, not just the screen: the approver "
+                        "role is required and self-approval is refused."),
+    ),
+    dict(
+        id="44_approve", page="execute",
+        actions=[("fill_placeholder", "e.g. Raj Patel", "Raj Patel (Operations Director)"),
+                 ("check_all",), ("fill_css", "input.font-mono", "POST TO S4HANA")],
+        narration=(
+            "A second person approves. [[slnc 300]] They confirm they've reviewed "
+            "every change, that it alters live sales and planning documents, and that "
+            "it's recorded under their name. [[slnc 300]] Then they type the "
+            "confirmation."
+        ),
+        popup=dict(title="A deliberate act",
+                   figure="3 acknowledgements + POST TO S4HANA",
+                   body="The plan is recomputed on the server and must still match "
+                        "the request before it can post."),
+    ),
+    dict(
+        id="45_posted", page="execute",
+        actions=[("click_role", "Approve changes to S/4HANA"), ("wait_text", "APPROVED"),
+                 ("click_role", "Post 4 changes to S/4HANA"), ("wait_text", "POSTED"),
+                 ("scroll_to", "OData calls received")],
+        narration=(
+            "Posted. [[slnc 300]] S/4HANA received four OData calls, [[slnc 200]] and "
+            "wrote four change documents under the approver's name. [[slnc 300]] Each "
+            "procedure re-checked its rules before writing, [[slnc 200]] and every "
+            "change can be reversed."
+        ),
+        popup=dict(title="Recorded in the system of record",
+                   figure="4 OData calls · 4 change documents",
+                   body="PATCH sales order item, POST planned order; CDHDR/CDPOS "
+                        "audit trail, reversible."),
+    ),
+    dict(
+        id="35_close", page="execute", actions=[("wb_reset",)],
         narration=(
             "One event, sixteen million dollars, ninety-one percent defensible, "
-            "[[slnc 300]] and a clear view of what it costs. [[slnc 400]] All of it "
-            "walked from one governed ontology in Snowflake, over data that was "
-            "already there."
+            "[[slnc 300]] carried into S/4HANA with a person in the loop. [[slnc 400]] "
+            "All of it walked from one governed ontology in Snowflake, over data "
+            "that was already there."
         ),
         popup=dict(title="One governed model, end to end",
                    figure="no shadow copy",
-                   body="Scenario, ripple and recovery, all walked from Snowflake "
-                        "Business Ontology over SAP data in place."),
+                   body="Scenario, ripple, recovery and execution, all governed by "
+                        "Snowflake Business Ontology over SAP data in place."),
     ),
 ]

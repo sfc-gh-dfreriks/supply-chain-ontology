@@ -136,9 +136,9 @@ Playwright (`npm run dev`; the hurricane preset is loaded through
 `sessionStorage['sc.preset']`), cached in `tools/.presales_shots/` and reused if
 the app is down.
 
-The narrated walkthrough (`04_Walkthrough_Narrated_6min07.mp4`, re-recorded
+The narrated walkthrough (`04_Walkthrough_Narrated_7min19.mp4`, re-recorded
 16 Nov 2026) opens on Snowflake Business Ontology, shows the agent searching it, then runs the hurricane scenario
-and the red/green recovery. Its script is `tools/video/segments.py`.
+and the red/green recovery, then posts the plan to S/4HANA through the governed approval. Its script is `tools/video/segments.py`.
 
 Check the deck renders before shipping it — a text box that overflows in
 PowerPoint is invisible in the XML:

@@ -375,7 +375,8 @@ function Posted({ cr }: { cr: ChangeRequest }) {
             {cr.approvals.map((a, k) => (
               <div key={k}>
                 <b>{a.decision}</b> by {a.approver} · acknowledged {a.acknowledgements?.length ?? 0}/3 · “{a.confirmation}”
-                {a.comment ? ` · ${a.comment}` : ""} <span className="text-slate-400">(Snowflake {a.snowflake_user} as {a.snowflake_role})</span>
+                {a.comment ? ` · ${a.comment}` : ""}
+                {/* the Snowflake login and role are kept in CR_APPROVAL for audit, not shown on screen */}
               </div>
             ))}
           </div>
